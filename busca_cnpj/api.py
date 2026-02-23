@@ -205,8 +205,23 @@ def confirmar_dados_cnpj(supplier_name: str, dados: str) -> dict:
             supplier.supplier_name = new_razao
         supplier.save(ignore_permissions=True)
 
-    address_name = _criar_endereco(supplier.name, dados)
-    contact_name = _criar_contato(supplier.name, dados)
+    address_name = None
+    try:
+        address_name = _criar_endereco(supplier.name, dados)
+    except Exception:
+        frappe.log_error(
+            title="Busca CNPJ: erro ao criar endereço",
+            message=f"Supplier: {supplier.name}\n{frappe.get_traceback()}",
+        )
+
+    contact_name = None
+    try:
+        contact_name = _criar_contato(supplier.name, dados)
+    except Exception:
+        frappe.log_error(
+            title="Busca CNPJ: erro ao criar contato",
+            message=f"Supplier: {supplier.name}\n{frappe.get_traceback()}",
+        )
 
     if address_name:
         supplier.reload()
@@ -218,10 +233,13 @@ def confirmar_dados_cnpj(supplier_name: str, dados: str) -> dict:
         supplier.supplier_primary_contact = contact_name
         supplier.save(ignore_permissions=True)
 
+    cnaes_count = len(dados.get("cnaes", []))
+
     return {
         "supplier": supplier.name,
         "address": address_name,
         "contact": contact_name,
+        "cnaes_count": cnaes_count,
     }
 
 
@@ -238,12 +256,13 @@ def _atualizar_cnaes(supplier, cnaes: list[dict]):
 def _criar_endereco(supplier_name: str, dados: dict) -> str | None:
     endereco = dados.get("endereco", {})
     address_line1 = endereco.get("address_line1", "")
-    if not address_line1:
-        return None
-
     city = endereco.get("city", "")
+
+    if not address_line1:
+        address_line1 = endereco.get("address_line2", "") or "Endereço não informado"
+
     if not city:
-        return None
+        city = endereco.get("state", "") or "Não informado"
 
     existing = frappe.db.get_all(
         "Dynamic Link",

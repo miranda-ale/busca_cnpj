@@ -339,6 +339,13 @@ function aplicar_dados_cnpj(frm, dados) {
 
 		frm.save().then(() => {
 			_chamar_confirmar(frm, dados);
+		}).catch((err) => {
+			frappe.msgprint({
+				title: __("Erro ao salvar fornecedor"),
+				message: __("Não foi possível salvar o fornecedor. Verifique se o CNPJ já está cadastrado."),
+				indicator: "red",
+			});
+			console.error("Busca CNPJ - erro ao salvar:", err);
 		});
 		return;
 	}
@@ -356,20 +363,46 @@ function _chamar_confirmar(frm, dados) {
 		freeze: true,
 		freeze_message: __("Preenchendo dados do fornecedor..."),
 		callback(r) {
-			if (r.message) {
-				frappe.show_alert(
-					{
-						message: __("Fornecedor atualizado com sucesso! Endereço, contato e CNAEs vinculados."),
-						indicator: "green",
-					},
-					7
-				);
-				if (r.message.supplier !== frm.doc.name) {
-					frappe.set_route("Form", "Supplier", r.message.supplier);
-				} else {
-					frm.reload_doc();
-				}
+			if (!r.message) return;
+
+			const res = r.message;
+			const parts = [];
+			if (res.address) parts.push(__("Endereço"));
+			if (res.contact) parts.push(__("Contato"));
+			if (res.cnaes_count) parts.push(__("{0} CNAEs", [res.cnaes_count]));
+
+			const warnings = [];
+			if (!res.address) warnings.push(__("Endereço não criado (dados insuficientes da Receita Federal)."));
+			if (!res.contact) warnings.push(__("Contato não criado (sem sócios, telefone ou e-mail)."));
+
+			if (parts.length) {
+				frappe.show_alert({
+					message: __("Fornecedor atualizado! Vinculados: {0}.", [parts.join(", ")]),
+					indicator: "green",
+				}, 7);
 			}
+
+			if (warnings.length) {
+				frappe.msgprint({
+					title: __("Aviso"),
+					message: warnings.join("<br>"),
+					indicator: "orange",
+				});
+			}
+
+			if (res.supplier !== frm.doc.name) {
+				frappe.set_route("Form", "Supplier", res.supplier);
+			} else {
+				frm.reload_doc();
+			}
+		},
+		error(err) {
+			frappe.msgprint({
+				title: __("Erro ao confirmar dados"),
+				message: __("Ocorreu um erro ao preencher os dados do fornecedor. Verifique o Error Log."),
+				indicator: "red",
+			});
+			console.error("Busca CNPJ - erro em confirmar_dados_cnpj:", err);
 		},
 	});
 }
