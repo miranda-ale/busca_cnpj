@@ -1,0 +1,45 @@
+{
+ "actions": [],
+ "creation": "2026-02-23 12:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "cnae_code",
+  "description",
+  "is_primary"
+ ],
+ "fields": [
+  {
+   "fieldname": "cnae_code",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "C\u00f3digo CNAE",
+   "reqd": 1
+  },
+  {
+   "fieldname": "description",
+   "fieldtype": "Small Text",
+   "in_list_view": 1,
+   "label": "Descri\u00e7\u00e3o"
+  },
+  {
+   "default": "0",
+   "fieldname": "is_primary",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "label": "Principal"
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "istable": 1,
+ "links": [],
+ "modified": "2026-02-23 12:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Busca CNPJ",
+ "name": "CNAE Fornecedor",
+ "owner": "Administrator",
+ "permissions": [],
+ "sort_field": "creation",
+ "sort_order": "ASC",
+ "states": []
+}

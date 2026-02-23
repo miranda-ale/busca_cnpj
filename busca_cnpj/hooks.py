@@ -43,7 +43,7 @@ app_license = "mit"
 # page_js = {"page" : "public/js/file.js"}
 
 # include js in doctype views
-# doctype_js = {"doctype" : "public/js/doctype.js"}
+doctype_js = {"Supplier": "public/js/supplier.js"}
 # doctype_list_js = {"doctype" : "public/js/doctype_list.js"}
 # doctype_tree_js = {"doctype" : "public/js/doctype_tree.js"}
 # doctype_calendar_js = {"doctype" : "public/js/doctype_calendar.js"}
@@ -83,7 +83,8 @@ app_license = "mit"
 # ------------
 
 # before_install = "busca_cnpj.install.before_install"
-# after_install = "busca_cnpj.install.after_install"
+after_install = "busca_cnpj.setup.after_install"
+after_migrate = ["busca_cnpj.setup.after_migrate"]
 
 # Uninstallation
 # ------------
