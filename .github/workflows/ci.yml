@@ -48,17 +48,12 @@ jobs:
         with:
           python-version: '3.14'
 
-      - name: Upgrade pip and build tools
-        run: |
-          python -m pip install --upgrade pip setuptools wheel
-          python -m pip install 'flit_core>=3.2,<4'
-
       - name: Setup Node
         uses: actions/setup-node@v3
         with:
-          node-version: ">=24"
+          node-version: '>=24'
           check-latest: true
-      
+
       - name: Cache pip
         uses: actions/cache@v4
         with:
@@ -81,7 +76,7 @@ jobs:
             ${{ runner.os }}-yarn-
 
       - name: Install MariaDB Client
-        run: sudo apt-get install mariadb-client
+        run: sudo apt-get install mariadb-client-10.6
 
       - name: Setup
         run: |
@@ -90,15 +85,7 @@ jobs:
           mariadb --host 127.0.0.1 --port 3306 -u root -proot -e "SET GLOBAL character_set_server = 'utf8mb4'"
           mariadb --host 127.0.0.1 --port 3306 -u root -proot -e "SET GLOBAL collation_server = 'utf8mb4_unicode_ci'"
 
-      - name: Clone Frappe with stable version
-        working-directory: ~/frappe-bench/apps
-        run: |
-          rm -rf frappe
-          git clone https://github.com/frappe/frappe.git --branch version-15-hotfix --depth 1
-          cd frappe
-          pip install --no-build-isolation -e .
-
-      - name: Install App
+      - name: Install
         working-directory: /home/runner/frappe-bench
         run: |
           bench get-app busca_cnpj $GITHUB_WORKSPACE
