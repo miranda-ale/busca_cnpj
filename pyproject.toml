@@ -4,11 +4,11 @@ authors = [
     { name = "Alessandro Miranda", email = "alessandro.siqueira@outlook.com"}
 ]
 description = "Busca de CNPJs Brasileiros integrados ao DocType de Fornecedores (Suppliers)"
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 readme = "README.md"
 dynamic = ["version"]
 dependencies = [
-    # "frappe~=15.0.0" # Installed and managed by bench.
+    "frappe~=15.100.0" # Installed and managed by bench.
 ]
 
 [build-system]
