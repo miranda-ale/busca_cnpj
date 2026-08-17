@@ -1,6 +1,8 @@
 ### Busca CNPJ
 
-Busca de CNPJs Brasileiros integrados ao DocType de Fornecedores (Suppliers)
+Busca de CNPJs Brasileiros integrados ao DocType de Fornecedores (Suppliers).
+
+Aceita CNPJ numérico e o modelo alfanumérico da Receita Federal (a partir de julho/2026).
 
 ### Installation
 

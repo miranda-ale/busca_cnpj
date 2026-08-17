@@ -22,44 +22,45 @@ const CNPJ_WEIGHTS_1 = [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
 const CNPJ_WEIGHTS_2 = [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
 
 function strip_cnpj(value) {
-	return (value || "").replace(/\D/g, "");
+	return (value || "").toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 14);
 }
 
-function format_cnpj(digits) {
-	if (digits.length !== 14) return digits;
+function format_cnpj(base) {
+	if (base.length !== 14) return base;
 	return (
-		digits.slice(0, 2) + "." +
-		digits.slice(2, 5) + "." +
-		digits.slice(5, 8) + "/" +
-		digits.slice(8, 12) + "-" +
-		digits.slice(12)
+		base.slice(0, 2) + "." +
+		base.slice(2, 5) + "." +
+		base.slice(5, 8) + "/" +
+		base.slice(8, 12) + "-" +
+		base.slice(12)
 	);
 }
 
 function validate_cnpj(cnpj) {
-	const digits = strip_cnpj(cnpj);
-	if (digits.length !== 14) return false;
-	if (/^(\d)\1{13}$/.test(digits)) return false;
+	const base = strip_cnpj(cnpj);
+	if (base.length !== 14) return false;
+	if (!/^[A-Z0-9]{12}\d{2}$/.test(base)) return false;
+	if (base === base[0].repeat(14)) return false;
 
-	function calc_digit(base, weights) {
+	function calc_digit(chars, weights) {
 		let total = 0;
 		for (let i = 0; i < weights.length; i++) {
-			total += parseInt(base[i]) * weights[i];
+			total += (chars.charCodeAt(i) - 48) * weights[i];
 		}
 		const remainder = total % 11;
 		return remainder < 2 ? 0 : 11 - remainder;
 	}
 
-	if (calc_digit(digits.slice(0, 12), CNPJ_WEIGHTS_1) !== parseInt(digits[12])) return false;
-	if (calc_digit(digits.slice(0, 13), CNPJ_WEIGHTS_2) !== parseInt(digits[13])) return false;
+	if (calc_digit(base.slice(0, 12), CNPJ_WEIGHTS_1) !== parseInt(base[12], 10)) return false;
+	if (calc_digit(base.slice(0, 13), CNPJ_WEIGHTS_2) !== parseInt(base[13], 10)) return false;
 	return true;
 }
 
 function format_cnpj_field(frm) {
 	const raw = frm.doc.tax_id || "";
-	const digits = strip_cnpj(raw);
-	if (digits.length === 14) {
-		const formatted = format_cnpj(digits);
+	const base = strip_cnpj(raw);
+	if (base.length === 14) {
+		const formatted = format_cnpj(base);
 		if (raw !== formatted) {
 			frm.set_value("tax_id", formatted);
 		}
@@ -129,12 +130,12 @@ function setup_cnpj_mask(frm) {
 	$input.data("cnpj_mask_bound", true);
 	$input.on("input", function () {
 		const raw = $(this).val();
-		const digits = raw.replace(/\D/g, "").slice(0, 14);
-		let masked = digits;
-		if (digits.length > 2) masked = digits.slice(0, 2) + "." + digits.slice(2);
-		if (digits.length > 5) masked = masked.slice(0, 6) + "." + digits.slice(5);
-		if (digits.length > 8) masked = masked.slice(0, 10) + "/" + digits.slice(8);
-		if (digits.length > 12) masked = masked.slice(0, 15) + "-" + digits.slice(12);
+		const base = strip_cnpj(raw);
+		let masked = base;
+		if (base.length > 2) masked = base.slice(0, 2) + "." + base.slice(2);
+		if (base.length > 5) masked = masked.slice(0, 6) + "." + base.slice(5);
+		if (base.length > 8) masked = masked.slice(0, 10) + "/" + base.slice(8);
+		if (base.length > 12) masked = masked.slice(0, 15) + "-" + base.slice(12);
 		if (raw !== masked) {
 			$(this).val(masked);
 		}
@@ -148,14 +149,14 @@ function setup_cnpj_mask(frm) {
 
 function buscar_cnpj(frm) {
 	const cnpj = frm.doc.tax_id || "";
-	const digits = strip_cnpj(cnpj);
+	const base = strip_cnpj(cnpj);
 
-	if (!digits) {
+	if (!base) {
 		frappe.msgprint(__("Informe o CNPJ antes de buscar."));
 		return;
 	}
 
-	if (!validate_cnpj(digits)) {
+	if (!validate_cnpj(base)) {
 		frappe.msgprint({
 			title: __("CNPJ Inválido"),
 			message: __("O CNPJ informado não é válido. Verifique os dígitos."),
@@ -166,7 +167,7 @@ function buscar_cnpj(frm) {
 
 	frappe.call({
 		method: "busca_cnpj.api.buscar_cnpj",
-		args: { cnpj: digits },
+		args: { cnpj: base },
 		freeze: true,
 		freeze_message: __("Consultando CNPJ na Receita Federal..."),
 		callback(r) {

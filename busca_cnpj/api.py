@@ -8,36 +8,10 @@ import frappe
 from frappe import _
 
 
+from busca_cnpj.cnpj import formatar_cnpj, normalizar_cnpj, validar_cnpj
+
 BRASILAPI_BASE_URL = "https://brasilapi.com.br/api/cnpj/v1"
-
-CNPJ_WEIGHTS_1 = [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2]
-CNPJ_WEIGHTS_2 = [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2]
-
-
-def validar_cnpj(cnpj: str) -> bool:
-    digits = re.sub(r"\D", "", cnpj)
-    if len(digits) != 14:
-        return False
-    if digits == digits[0] * 14:
-        return False
-
-    def calc_digit(base, weights):
-        total = sum(int(base[i]) * weights[i] for i in range(len(weights)))
-        remainder = total % 11
-        return 0 if remainder < 2 else 11 - remainder
-
-    if calc_digit(digits[:12], CNPJ_WEIGHTS_1) != int(digits[12]):
-        return False
-    if calc_digit(digits[:13], CNPJ_WEIGHTS_2) != int(digits[13]):
-        return False
-    return True
-
-
-def formatar_cnpj(cnpj: str) -> str:
-    digits = re.sub(r"\D", "", cnpj)
-    if len(digits) != 14:
-        return cnpj
-    return f"{digits[:2]}.{digits[2:5]}.{digits[5:8]}/{digits[8:12]}-{digits[12:]}"
+MINHA_RECEITA_BASE_URL = "https://minhareceita.org"
 
 
 def formatar_cep(cep: str) -> str:
@@ -108,28 +82,46 @@ def _extrair_cnaes(dados: dict) -> list[dict]:
     return cnaes
 
 
+def _consultar_api(cnpj: str):
+	"""Consulta BrasilAPI e, se não achar, Minha Receita (melhor suporte alfanumérico)."""
+	urls = (
+		f"{BRASILAPI_BASE_URL}/{cnpj}",
+		f"{MINHA_RECEITA_BASE_URL}/{cnpj}",
+	)
+	ultimo_status = None
+	conectou = False
+
+	for url in urls:
+		try:
+			response = requests.get(url, timeout=15)
+		except requests.exceptions.RequestException:
+			continue
+		conectou = True
+		ultimo_status = response.status_code
+		if response.status_code == 200:
+			return response.json()
+		if response.status_code not in (400, 404):
+			frappe.throw(
+				_("Erro ao consultar CNPJ (código {0}). Tente novamente.").format(
+					response.status_code
+				)
+			)
+
+	if not conectou:
+		frappe.throw(_("Não foi possível conectar à API de consulta. Tente novamente."))
+	if ultimo_status == 404:
+		frappe.throw(_("CNPJ não encontrado na base da Receita Federal."))
+	frappe.throw(_("CNPJ não encontrado na base da Receita Federal."))
+
+
 @frappe.whitelist()
 def buscar_cnpj(cnpj: str) -> dict:
-    digits = re.sub(r"\D", "", cnpj)
+    base = normalizar_cnpj(cnpj)
 
-    if not validar_cnpj(digits):
+    if not validar_cnpj(base):
         frappe.throw(_("CNPJ inválido. Verifique os dígitos informados."))
 
-    try:
-        response = requests.get(f"{BRASILAPI_BASE_URL}/{digits}", timeout=15)
-    except requests.exceptions.RequestException:
-        frappe.throw(_("Não foi possível conectar à API de consulta. Tente novamente."))
-
-    if response.status_code == 404:
-        frappe.throw(_("CNPJ não encontrado na base da Receita Federal."))
-    if response.status_code != 200:
-        frappe.throw(
-            _("Erro ao consultar CNPJ (código {0}). Tente novamente.").format(
-                response.status_code
-            )
-        )
-
-    dados = response.json()
+    dados = _consultar_api(base)
 
     razao = sanitizar_razao_social(dados.get("razao_social", ""))
     fantasia = sanitizar_razao_social(dados.get("nome_fantasia", ""))
@@ -137,17 +129,25 @@ def buscar_cnpj(cnpj: str) -> dict:
     socios = []
     for s in dados.get("qsa") or []:
         socios.append({
-            "nome": s.get("nome_socio", ""),
-            "qualificacao": s.get("qualificacao_socio", ""),
+            "nome": s.get("nome_socio") or s.get("nome") or "",
+            "qualificacao": s.get("qualificacao_socio") or s.get("qualificacao") or "",
         })
 
-    situacao_ativa = dados.get("situacao_cadastral") == 2
+    situacao = dados.get("situacao_cadastral")
+    situacao_ativa = situacao == 2 or str(situacao).upper() == "ATIVA"
+    situacao_desc = (
+        dados.get("descricao_situacao_cadastral")
+        or dados.get("descricao_situacao")
+        or ("" if situacao in (None, 2) else str(situacao))
+    )
+    if situacao_ativa and not situacao_desc:
+        situacao_desc = "ATIVA"
 
     return {
-        "cnpj_formatado": formatar_cnpj(digits),
+        "cnpj_formatado": formatar_cnpj(base),
         "razao_social": razao,
         "nome_fantasia": fantasia,
-        "situacao_cadastral": dados.get("descricao_situacao_cadastral", ""),
+        "situacao_cadastral": situacao_desc,
         "situacao_ativa": situacao_ativa,
         "natureza_juridica": dados.get("natureza_juridica", ""),
         "data_inicio_atividade": dados.get("data_inicio_atividade", ""),
