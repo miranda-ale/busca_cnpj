@@ -54,3 +54,29 @@ def formatar_cnpj(cnpj: str | None) -> str:
 	if len(base) != 14:
 		return cnpj or ""
 	return f"{base[:2]}.{base[2:5]}.{base[5:8]}/{base[8:12]}-{base[12:]}"
+
+
+def validar_cpf(cpf: str | None) -> bool:
+	digits = re.sub(r"\D", "", cpf or "")
+	if len(digits) != 11 or digits == digits[0] * 11:
+		return False
+	for turn, pos in ((9, 10), (10, 11)):
+		total = sum(int(digits[i]) * (pos - i) for i in range(turn))
+		dv = (total * 10) % 11
+		if dv == 10:
+			dv = 0
+		if dv != int(digits[turn]):
+			return False
+	return True
+
+
+def validar_tax_id(valor: str | None) -> bool:
+	"""CPF (11 dígitos) ou CNPJ numérico/alfanumérico (14). Vazio é válido."""
+	if not (valor or "").strip():
+		return True
+	base = normalizar_cnpj(valor)
+	if len(base) == 11 and base.isdigit():
+		return validar_cpf(base)
+	if len(base) == 14:
+		return validar_cnpj(base)
+	return False

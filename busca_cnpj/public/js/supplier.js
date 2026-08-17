@@ -4,6 +4,18 @@ frappe.ui.form.on("Supplier", {
 		setup_cnpj_mask(frm);
 	},
 
+	validate(frm) {
+		const raw = frm.doc.tax_id || "";
+		if (!raw.trim()) return;
+		const base = strip_cnpj(raw);
+		if (base.length === 11 && /^\d{11}$/.test(base)) return;
+		if (!validate_cnpj(base)) {
+			frappe.throw(
+				__("CNPJ/CPF inválido: {0}. Verifique os dígitos informados.", [raw])
+			);
+		}
+	},
+
 	tax_id(frm) {
 		format_cnpj_field(frm);
 	},

@@ -41,6 +41,14 @@ class TestCnpjAlfanumerico(unittest.TestCase):
 		self.assertEqual(formatar_cnpj("00000000E08G12"), "00.000.000/E08G-12")
 		self.assertEqual(formatar_cnpj("00000000000191"), "00.000.000/0001-91")
 
+	def test_tax_id_vazio_e_alfanumerico(self):
+		from busca_cnpj.cnpj import validar_tax_id
+
+		self.assertTrue(validar_tax_id(""))
+		self.assertTrue(validar_tax_id("00.000.000/E08G-12"))
+		self.assertTrue(validar_tax_id("00.000.000/0001-91"))
+		self.assertFalse(validar_tax_id("00.000.000/E08G-99"))
+
 
 if __name__ == "__main__":
 	unittest.main()
