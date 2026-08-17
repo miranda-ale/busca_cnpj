@@ -36,6 +36,9 @@ LEGACY_MARKERS = (
     "numeros digitados",
     "verifique os números digitados",
     "verifique os numeros digitados",
+    "is_valid_cnpj",
+    "cnpj.length !== 14",
+    "cnpj.length != 14",
 )
 
 
