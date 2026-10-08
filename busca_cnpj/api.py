@@ -12,6 +12,7 @@ from busca_cnpj.cnpj import formatar_cnpj, normalizar_cnpj, validar_cnpj
 
 BRASILAPI_BASE_URL = "https://brasilapi.com.br/api/cnpj/v1"
 MINHA_RECEITA_BASE_URL = "https://minhareceita.org"
+CNPJWS_BASE_URL = "https://publica.cnpj.ws/cnpj"
 
 
 def formatar_cep(cep: str) -> str:
@@ -82,35 +83,77 @@ def _extrair_cnaes(dados: dict) -> list[dict]:
     return cnaes
 
 
+def _normalizar_cnpjws(d: dict) -> dict:
+	"""Converte a resposta do CNPJ.ws para o formato da BrasilAPI usado em buscar_cnpj."""
+	est = d.get("estabelecimento") or {}
+	principal = est.get("atividade_principal") or {}
+	ddd1, tel1 = est.get("ddd1") or "", est.get("telefone1") or ""
+	ddd2, tel2 = est.get("ddd2") or "", est.get("telefone2") or ""
+	return {
+		"razao_social": d.get("razao_social") or "",
+		"nome_fantasia": est.get("nome_fantasia") or "",
+		"situacao_cadastral": est.get("situacao_cadastral") or "",
+		"natureza_juridica": (d.get("natureza_juridica") or {}).get("descricao", ""),
+		"data_inicio_atividade": est.get("data_inicio_atividade") or "",
+		"cnae_fiscal": principal.get("id") or "",
+		"cnae_fiscal_descricao": principal.get("descricao") or "",
+		"cnaes_secundarios": [
+			{"codigo": a.get("id", ""), "descricao": a.get("descricao", "")}
+			for a in est.get("atividades_secundarias") or []
+		],
+		"qsa": [
+			{
+				"nome_socio": s.get("nome") or "",
+				"qualificacao_socio": (s.get("qualificacao_socio") or {}).get("descricao", "").strip(),
+			}
+			for s in d.get("socios") or []
+		],
+		"descricao_tipo_de_logradouro": est.get("tipo_logradouro") or "",
+		"logradouro": est.get("logradouro") or "",
+		"numero": est.get("numero") or "",
+		"complemento": est.get("complemento") or "",
+		"bairro": est.get("bairro") or "",
+		"municipio": (est.get("cidade") or {}).get("nome", ""),
+		"uf": (est.get("estado") or {}).get("sigla", ""),
+		"cep": est.get("cep") or "",
+		"ddd_telefone_1": f"{ddd1}{tel1}" if tel1 else "",
+		"ddd_telefone_2": f"{ddd2}{tel2}" if tel2 else "",
+		"email": est.get("email") or "",
+	}
+
+
 def _consultar_api(cnpj: str):
-	"""Consulta BrasilAPI e, se não achar, Minha Receita (melhor suporte alfanumérico)."""
-	urls = (
-		f"{BRASILAPI_BASE_URL}/{cnpj}",
-		f"{MINHA_RECEITA_BASE_URL}/{cnpj}",
+	"""Consulta CNPJ.ws e, em caso de falha, BrasilAPI e Minha Receita (melhor suporte alfanumérico)."""
+	fontes = (
+		(f"{CNPJWS_BASE_URL}/{cnpj}", _normalizar_cnpjws),
+		(f"{BRASILAPI_BASE_URL}/{cnpj}", None),
+		(f"{MINHA_RECEITA_BASE_URL}/{cnpj}", None),
 	)
-	ultimo_status = None
+	erro_servidor = None
 	conectou = False
 
-	for url in urls:
+	for url, conversor in fontes:
 		try:
 			response = requests.get(url, timeout=15)
 		except requests.exceptions.RequestException:
 			continue
 		conectou = True
-		ultimo_status = response.status_code
 		if response.status_code == 200:
-			return response.json()
+			try:
+				dados = response.json()
+				return conversor(dados) if conversor else dados
+			except ValueError:
+				erro_servidor = response.status_code
+				continue
 		if response.status_code not in (400, 404):
-			frappe.throw(
-				_("Erro ao consultar CNPJ (código {0}). Tente novamente.").format(
-					response.status_code
-				)
-			)
+			erro_servidor = response.status_code
 
 	if not conectou:
 		frappe.throw(_("Não foi possível conectar à API de consulta. Tente novamente."))
-	if ultimo_status == 404:
-		frappe.throw(_("CNPJ não encontrado na base da Receita Federal."))
+	if erro_servidor:
+		frappe.throw(
+			_("Erro ao consultar CNPJ (código {0}). Tente novamente.").format(erro_servidor)
+		)
 	frappe.throw(_("CNPJ não encontrado na base da Receita Federal."))
 
 
