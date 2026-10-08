@@ -22,6 +22,14 @@ CUSTOM_FIELDS = {
             "insert_after": "cnae_section",
         },
     ],
+    "Employee": [
+        {
+            "fieldname": "custom_current_cep",
+            "fieldtype": "Data",
+            "label": "CEP (Endereço Atual)",
+            "insert_after": "address_section",
+        },
+    ],
     "Address": [
         {
             "fieldname": "custom_bairro",
