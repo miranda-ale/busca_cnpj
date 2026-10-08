@@ -251,6 +251,7 @@ function show_cnpj_modal(frm, dados) {
 	const endereco_parts = [
 		end.address_line1,
 		end.address_line2,
+		end.bairro ? __("Bairro") + " " + end.bairro : "",
 		[end.city, end.state].filter(Boolean).join("/"),
 		end.pincode ? "CEP " + end.pincode : "",
 	].filter(Boolean);

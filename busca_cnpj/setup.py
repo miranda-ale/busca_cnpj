@@ -1,5 +1,8 @@
+import json
+
 import frappe
 from frappe.custom.doctype.custom_field.custom_field import create_custom_fields
+from frappe.custom.doctype.property_setter.property_setter import make_property_setter
 
 
 CUSTOM_FIELDS = {
@@ -19,12 +22,41 @@ CUSTOM_FIELDS = {
             "insert_after": "cnae_section",
         },
     ],
+    "Address": [
+        {
+            "fieldname": "custom_bairro",
+            "fieldtype": "Data",
+            "label": "Bairro",
+            "insert_after": "address_line2",
+        },
+    ],
 }
 
 
 def after_install():
     create_custom_fields(CUSTOM_FIELDS, update=True)
+    ajustar_layout_address()
     desativar_scripts_cnpj_legado()
+
+
+def ajustar_layout_address():
+    """Rotula o CEP e o coloca logo abaixo do tipo de endereço, antes do logradouro."""
+    make_property_setter("Address", "pincode", "label", "CEP", "Data")
+
+    campos = [df.fieldname for df in frappe.get_meta("Address", cached=False).fields]
+    if "pincode" not in campos or "address_type" not in campos:
+        return
+    campos.remove("pincode")
+    campos.insert(campos.index("address_type") + 1, "pincode")
+
+    atual = frappe.db.get_value(
+        "Property Setter",
+        {"doc_type": "Address", "doctype_or_field": "DocType", "property": "field_order"},
+        "value",
+    )
+    if atual and json.loads(atual) == campos:
+        return
+    make_property_setter("Address", None, "field_order", json.dumps(campos), "Data", for_doctype=True)
 
 
 def after_migrate():

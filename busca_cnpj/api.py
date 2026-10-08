@@ -13,6 +13,7 @@ from busca_cnpj.cnpj import formatar_cnpj, normalizar_cnpj, validar_cnpj
 BRASILAPI_BASE_URL = "https://brasilapi.com.br/api/cnpj/v1"
 MINHA_RECEITA_BASE_URL = "https://minhareceita.org"
 CNPJWS_BASE_URL = "https://publica.cnpj.ws/cnpj"
+VIACEP_BASE_URL = "https://viacep.com.br/ws"
 
 
 def formatar_cep(cep: str) -> str:
@@ -59,9 +60,6 @@ def _montar_address_line2(dados: dict) -> str:
     complemento = (dados.get("complemento") or "").strip()
     if complemento:
         parts.append(complemento)
-    bairro = (dados.get("bairro") or "").strip()
-    if bairro:
-        parts.append(f"Bairro {bairro}")
     return ", ".join(parts)
 
 
@@ -200,6 +198,7 @@ def buscar_cnpj(cnpj: str) -> dict:
         "endereco": {
             "address_line1": _montar_address_line1(dados),
             "address_line2": _montar_address_line2(dados),
+            "bairro": (dados.get("bairro") or "").strip(),
             "city": dados.get("municipio", ""),
             "state": dados.get("uf", ""),
             "pincode": formatar_cep(dados.get("cep", "")),
@@ -210,6 +209,40 @@ def buscar_cnpj(cnpj: str) -> dict:
         "telefone_1": formatar_telefone(dados.get("ddd_telefone_1", "")),
         "telefone_2": formatar_telefone(dados.get("ddd_telefone_2", "")),
         "email": dados.get("email") or "",
+    }
+
+
+@frappe.whitelist()
+def buscar_cep(cep: str) -> dict:
+    digits = re.sub(r"\D", "", cep or "")
+    if len(digits) != 8:
+        frappe.throw(_("CEP inválido. Informe os 8 dígitos."))
+
+    try:
+        response = requests.get(f"{VIACEP_BASE_URL}/{digits}/json/", timeout=15)
+    except requests.exceptions.RequestException:
+        frappe.throw(_("Não foi possível conectar ao ViaCEP. Tente novamente."))
+
+    if response.status_code == 400:
+        frappe.throw(_("CEP inválido. Verifique os dígitos informados."))
+    if response.status_code != 200:
+        frappe.throw(_("Erro ao consultar CEP (código {0}). Tente novamente.").format(response.status_code))
+
+    try:
+        dados = response.json()
+    except ValueError:
+        frappe.throw(_("Resposta inválida do ViaCEP. Tente novamente."))
+
+    if dados.get("erro"):
+        frappe.throw(_("CEP não encontrado."))
+
+    return {
+        "pincode": formatar_cep(digits),
+        "address_line1": (dados.get("logradouro") or "").strip(),
+        "address_line2": (dados.get("complemento") or "").strip(),
+        "bairro": (dados.get("bairro") or "").strip(),
+        "city": (dados.get("localidade") or "").strip(),
+        "state": (dados.get("uf") or "").strip(),
     }
 
 
@@ -327,6 +360,7 @@ def _criar_endereco(supplier_name: str, dados: dict) -> str | None:
     address.address_type = "Office"
     address.address_line1 = address_line1
     address.address_line2 = endereco.get("address_line2", "")
+    address.custom_bairro = endereco.get("bairro", "")
     address.city = city
     address.state = endereco.get("state", "")
     address.country = "Brazil"
