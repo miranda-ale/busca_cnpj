@@ -43,7 +43,7 @@ required_apps = ["erpnext"]
 # page_js = {"page" : "public/js/file.js"}
 
 # include js in doctype views
-app_include_js = "/assets/busca_cnpj/js/cep.js"
+app_include_js = ["/assets/busca_cnpj/js/cep.js", "/assets/busca_cnpj/js/taxid.js"]
 
 doctype_js = {
 	"Supplier": "public/js/supplier.js",
