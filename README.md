@@ -80,7 +80,7 @@ Também é usado por outro app do bench: o `integracoes_customizadas` depende de
 | Máscara de CPF/CNPJ no formulário | `processo_judicial.js` | `busca_cnpj.taxid.bind_input` (com guarda `window.busca_cnpj?.taxid`) |
 
 Mudanças nas assinaturas e no retorno de `busca_cnpj.cnpj` e `busca_cnpj.api` afetam esse app. O helper
-`busca_cnpj.taxid` ainda não está no commit atual do `busca_cnpj` (ver [Estado do disco](#estado-do-disco-fora-do-commit)).
+O helper `busca_cnpj.taxid` é carregado globalmente por este app (`taxid.js`), mas hoje só o `integracoes_customizadas` o usa; nenhum formulário do próprio `busca_cnpj` o chama.
 
 ## Requisitos
 
@@ -119,7 +119,7 @@ busca_cnpj/
 ├── supplier_validate.py  # validação server-side do Fornecedor (doc_events)
 ├── setup.py              # Custom Fields, layout de Address e desativação de scripts legados
 ├── hooks.py · modules.txt · patches.txt (sem patches)
-├── public/js/            # cep.js (global) · supplier.js · address.js · employee.js
+├── public/js/            # cep.js · taxid.js (globais) · supplier.js · address.js · employee.js
 ├── tests/test_cnpj.py
 └── busca_cnpj/doctype/cnae_fornecedor/   # tabela filha de CNAEs
 ```
@@ -127,8 +127,10 @@ busca_cnpj/
 Não há workspace, relatórios, formatos de impressão, fixtures nem patches; o único DocType é `CNAE Fornecedor`
 (tabela filha).
 
-Carregamento do JavaScript (`hooks.py` no commit): `cep.js` entra em todas as páginas do Desk (`app_include_js`) e
-expõe `busca_cnpj.cep` (`strip`, `mask`, `bind_input`, `add_button`, `lookup`); `supplier.js`, `address.js` e
+Carregamento do JavaScript (`hooks.py`): `cep.js` e `taxid.js` entram em todas as páginas do Desk (`app_include_js`).
+`cep.js` expõe `busca_cnpj.cep` (`strip`, `mask`, `bind_input`, `add_button`, `lookup`); `taxid.js` expõe
+`busca_cnpj.taxid` (`strip`, `mask`, `bind_input`: máscara progressiva de CPF até 11 dígitos e de CNPJ, inclusive
+alfanumérico, acima disso ou com letras; limita o campo a 18 caracteres); `supplier.js`, `address.js` e
 `employee.js` entram por `doctype_js` em Supplier, Address e Employee. `supplier.js` tem as próprias cópias das
 funções de CNPJ (`strip_cnpj`, `format_cnpj`, `validate_cnpj`), duplicando `cnpj.py`.
 
@@ -160,12 +162,6 @@ pre-commit install
 Conferido em 2026-10-31 com `env/bin/ruff` 0.17.3, sem alterar arquivos: `ruff check` aponta 2 erros (I001, imports
 fora de ordem em `api.py` e `setup.py`) e `ruff format --check` indicaria reformatar 5 dos 17 arquivos Python
 (a base mistura tabs e espaços).
-
-## Estado do disco (fora do commit)
-
-Este README descreve o que está commitado (`HEAD`, tag `v1.3.6`). Na cópia local há alterações sem commit, **não
-documentadas aqui**: `hooks.py` modificado (`app_include_js` passa a incluir também `taxid.js`) e
-`busca_cnpj/public/js/taxid.js` não rastreado (`busca_cnpj.taxid`: máscara progressiva de CPF/CNPJ).
 
 ## Documentação
 

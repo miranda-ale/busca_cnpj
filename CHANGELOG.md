@@ -1,8 +1,7 @@
 # Changelog
 
 Histórico reconstruído de `git tag` e `git log` do app (somente leitura) e conferido com os arquivos. A data é a do
-commit marcado pela tag. Descreve só o que está commitado (`HEAD` = `v1.3.6`); alterações locais sem commit
-(`hooks.py`, `public/js/taxid.js`) ficam de fora.
+commit marcado pela tag. A entrada "Não lançado" vem de commits posteriores à `v1.3.6`.
 
 ## Limites do histórico git
 
@@ -16,12 +15,19 @@ commit marcado pela tag. Descreve só o que está commitado (`HEAD` = `v1.3.6`);
 - **Tipos de tag:** `v1.3.2` e `v1.3.3` são anotadas; `v1.3.1`, `v1.3.4`, `v1.3.5` e `v1.3.6` são leves. Não há tags
   `rc/*`.
 - **Datas de tag:** `v1.3.3` a `v1.3.6` caem no mesmo dia (2026-10-28), em sequência de commits de CI e versão.
+- **Sem tag:** o commit `b67b505` (2026-10-31) é posterior à `v1.3.6` e não alterou `__version__` (continua `1.3.6`).
 - **`__version__` x `app_version`:** `busca_cnpj/__init__.py` foi `1.2.2` nas tags `v1.3.1` e `v1.3.2` (a `v1.3.2` saiu
   com `__version__` desatualizado, o que a `v1.3.3` corrigiu) e acompanha a tag de `v1.3.3` em diante (`1.3.6` no
-  HEAD). O `hooks.py` não define `app_version`.
+  HEAD, mesmo depois de `b67b505`). O `hooks.py` não define `app_version`.
 - **Patches:** não há (`patches.txt` só com os cabeçalhos). Nada a observar sobre numeração.
 - As mensagens de commit são curtas; o conteúdo de cada entrada foi conferido nos arquivos de cada commit
   (`git show --stat`).
+
+## Não lançado · 2026-10-31
+
+- Commit `b67b505` ("feat: máscara progressiva de CPF/CNPJ global"): novo `public/js/taxid.js` (`busca_cnpj.taxid`:
+  `strip`, `mask`, `bind_input`) carregado em todo o Desk; `app_include_js` do `hooks.py` passa a ser a lista
+  `cep.js` + `taxid.js`. Usado pelo `integracoes_customizadas` (Processo Judicial); `__version__` não mudou.
 
 ## v1.3.6 — Fecha o ciclo do CI na main · 2026-10-28
 
