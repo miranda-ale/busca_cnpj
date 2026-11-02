@@ -94,8 +94,9 @@ O helper `busca_cnpj.taxid` é carregado globalmente por este app (`taxid.js`), 
 
 ```bash
 cd $PATH_TO_YOUR_BENCH
-bench get-app $URL_OF_THIS_REPO --branch develop
-bench --site <site> install-app busca_cnpj
+bench get-app erpnext --branch version-15
+bench get-app miranda-ale/busca_cnpj --branch main
+bench --site <site> install-app erpnext busca_cnpj
 bench --site <site> migrate
 ```
 

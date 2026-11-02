@@ -29,6 +29,11 @@ commit marcado pela tag. A entrada "Não lançado" vem de commits posteriores à
   `strip`, `mask`, `bind_input`) carregado em todo o Desk; `app_include_js` do `hooks.py` passa a ser a lista
   `cep.js` + `taxid.js`. Usado pelo `integracoes_customizadas` (Processo Judicial); `__version__` não mudou.
 
+## v2.0.0 — Dependências fixadas · 2026-11-02
+
+- `required_apps` passa a `frappe/erpnext@version-15`.
+- README: o `bench get-app` usava `--branch develop` (inexistente); agora `main`, com ERPNext no `version-15`.
+
 ## v1.3.6 — Fecha o ciclo do CI na main · 2026-10-28
 
 - Commit `60a352d` ("chore: fecha o ciclo do CI na main"): só incrementa `__version__` para `1.3.6`. Fecha o ciclo das
