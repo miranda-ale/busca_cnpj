@@ -82,6 +82,10 @@ Também é usado por outro app do bench: o `integracoes_customizadas` depende de
 Mudanças nas assinaturas e no retorno de `busca_cnpj.cnpj` e `busca_cnpj.api` afetam esse app. O helper
 O helper `busca_cnpj.taxid` é carregado globalmente por este app (`taxid.js`), mas hoje só o `integracoes_customizadas` o usa; nenhum formulário do próprio `busca_cnpj` o chama.
 
+O `busca_cnpj` não define papéis próprios: é responsabilidade de quem expõe estas APIs a um papel de usuário
+garantir leitura mínima em `Supplier`, `Address` e `Employee` para esse papel, para não bloquear o usuário no
+meio do fluxo — ver [docs/adr-001-leitura-minima-em-doctypes-vinculados.md](docs/adr-001-leitura-minima-em-doctypes-vinculados.md).
+
 ## Requisitos
 
 - Frappe v15 e ERPNext v15 (`required_apps = ["erpnext"]` e `[tool.bench.frappe-dependencies]` no `pyproject.toml`);
@@ -167,7 +171,9 @@ fora de ordem em `api.py` e `setup.py`) e `ruff format --check` indicaria reform
 ## Documentação
 
 - [CHANGELOG.md](CHANGELOG.md): histórico por versão e limites do git.
-- Não há pasta `docs/`.
+- [docs/adr-001-leitura-minima-em-doctypes-vinculados.md](docs/adr-001-leitura-minima-em-doctypes-vinculados.md):
+  princípio de leitura mínima garantida em DocTypes vinculados por Link, aplicado aos apps consumidores deste
+  app.
 
 ## Licença
 
