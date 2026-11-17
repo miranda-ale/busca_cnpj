@@ -86,6 +86,9 @@ O `busca_cnpj` não define papéis próprios: é responsabilidade de quem expõe
 garantir leitura mínima em `Supplier`, `Address` e `Employee` para esse papel, para não bloquear o usuário no
 meio do fluxo — ver [docs/adr-001-leitura-minima-em-doctypes-vinculados.md](docs/adr-001-leitura-minima-em-doctypes-vinculados.md).
 
+As consultas de CNPJ e CEP são integrações com serviço externo e devem logar falha com contexto suficiente para
+diagnosticar sem reler o código — ver [docs/adr-002-qualidade-e-legibilidade-de-logs.md](docs/adr-002-qualidade-e-legibilidade-de-logs.md).
+
 ## Requisitos
 
 - Frappe v15 e ERPNext v15 (`required_apps = ["erpnext"]` e `[tool.bench.frappe-dependencies]` no `pyproject.toml`);
