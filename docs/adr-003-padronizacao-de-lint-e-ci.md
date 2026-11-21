@@ -13,7 +13,11 @@ tomadas ao aplicá-la no `busca_cnpj`.
 
 ## Decisão
 
-1. Python 3.11 no CI, `target-version = "py311"` e `requires-python = ">=3.11"` (alvo a revisar para o v16).
+1. Versão do Python: o mínimo atual **3.11 é mantido** (`target-version = "py311"`, `requires-python = ">=3.11"`,
+   `linter.yml` em 3.11) por restrição de produção, cujas imagens usam Python 3.11 ou 3.12 (versão exata a
+   confirmar). O alvo de migração ao Frappe v16 é `>=3.13` (`target-version = "py313"`, `requires-python = ">=3.13"`,
+   `linter.yml` e `ci.yml` coerentes), a executar na própria migração. Risco registrado: o `ci.yml` roda os testes
+   em Python 3.14, acima da produção (3.11/3.12), então o CI pode não refletir o ambiente real.
 2. ruff fixado em v0.16.10 via `ruff-pre-commit`, regras `F,E,W,I,UP,B,RUF` e lista de `ignore` idêntica à do CLM.
 3. pyupgrade coberto pela regra `UP` do ruff, sem hook separado.
 4. F401 **não** é ignorado: imports mortos são removidos; reexportações/efeito colateral são mantidos com
@@ -53,6 +57,7 @@ tomadas ao aplicá-la no `busca_cnpj`.
 
 ## Pendências
 
-- Revisar o alvo Python (3.11) e as versões de prettier/eslint na preparação para o v16/v17.
+- Confirmar a versão exata do Python das imagens de produção, alinhar o Python do `ci.yml` (3.14) a ela e migrar para
+  `>=3.13` junto com o v16; revisar também as versões de prettier/eslint na preparação para o v16/v17.
 - Ampliar o pip-audit para cobrir as dependências erpnext/hrms (hoje comentadas).
 - Avaliar migrar o `.eslintrc` para a configuração flat quando o eslint for atualizado.
