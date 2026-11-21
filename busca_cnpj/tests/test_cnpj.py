@@ -52,3 +52,51 @@ class TestCnpjAlfanumerico(unittest.TestCase):
 
 if __name__ == "__main__":
 	unittest.main()
+
+
+class TestConfirmarDadosCnpj(unittest.TestCase):
+	"""Regressão dos achados do Semgrep: sem commit manual e sem GET em método que grava."""
+
+	def test_so_aceita_post(self):
+		import frappe
+
+		from busca_cnpj.api import confirmar_dados_cnpj
+
+		self.assertEqual(frappe.allowed_http_methods_for_whitelisted_func[confirmar_dados_cnpj], ["POST"])
+
+	def test_rename_duplicado_desfaz_so_o_rename_sem_commit(self):
+		from unittest import mock
+
+		import frappe
+
+		from busca_cnpj import api
+
+		supplier = mock.MagicMock()
+		supplier.name = "Antigo"
+		dados = {"razao_social": "Novo", "cnpj_formatado": "00.000.000/0001-91"}
+
+		with (
+			mock.patch.object(api.frappe.defaults, "get_global_default", return_value="Supplier Name"),
+			mock.patch.object(api.frappe, "get_doc", return_value=supplier),
+			mock.patch.object(api.frappe, "rename_doc", side_effect=frappe.DuplicateEntryError),
+			mock.patch.object(api.frappe, "log_error"),
+			mock.patch.object(api.frappe.db, "exists", return_value=None),
+			mock.patch.object(api.frappe.db, "savepoint") as savepoint,
+			mock.patch.object(api.frappe.db, "rollback") as rollback,
+			mock.patch.object(api.frappe.db, "commit") as commit,
+			mock.patch.object(api, "_criar_endereco", return_value=None),
+			mock.patch.object(api, "_criar_contato", return_value=None),
+		):
+			resultado = api.confirmar_dados_cnpj("Antigo", frappe.as_json(dados))
+
+		commit.assert_not_called()
+		savepoint.assert_called_once_with(api.SAVEPOINT_RENOMEAR_SUPPLIER)
+		rollback.assert_called_once_with(save_point=api.SAVEPOINT_RENOMEAR_SUPPLIER)
+		self.assertEqual(resultado["supplier"], "Antigo")
+
+	def test_sem_commit_manual_no_modulo(self):
+		import inspect
+
+		from busca_cnpj import api
+
+		self.assertNotIn("db.commit", inspect.getsource(api))

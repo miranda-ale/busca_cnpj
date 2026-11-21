@@ -28,6 +28,10 @@ commit marcado pela tag. A entrada "Não lançado" vem de commits posteriores à
 - Commit `b67b505` ("feat: máscara progressiva de CPF/CNPJ global"): novo `public/js/taxid.js` (`busca_cnpj.taxid`:
   `strip`, `mask`, `bind_input`) carregado em todo o Desk; `app_include_js` do `hooks.py` passa a ser a lista
   `cep.js` + `taxid.js`. Usado pelo `integracoes_customizadas` (Processo Judicial); `__version__` não mudou.
+- `confirmar_dados_cnpj` passa a aceitar só POST (`@frappe.whitelist(methods=["POST"])`; o único chamador JS usa
+  `frappe.call`, que é POST) e troca o `frappe.db.commit()` antes do rename do Fornecedor por um savepoint, revertido se
+  o rename falhar por duplicidade. Corrige os achados `whitelisted-side-effect-on-get` e `frappe-manual-commit` do
+  Semgrep; sem mudança de `__version__`.
 
 ## v2.0.0 — Dependências fixadas · 2026-11-02
 
