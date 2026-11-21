@@ -14,7 +14,7 @@ tomadas ao aplicá-la no `busca_cnpj`.
 ## Decisão
 
 1. Versão do Python: o mínimo atual **3.11 é mantido** (`target-version = "py311"`, `requires-python = ">=3.11"`,
-   `linter.yml` em 3.11) por restrição de produção. Produção e homologação foram confirmadas em **Python 3.12**, e o
+   `linter.yml` em 3.11 até a decisão 13) por restrição de produção. Produção e homologação foram confirmadas em **Python 3.12**, e o
    `ci.yml` passou a rodar os testes em 3.12 para refletir a produção; o 3.14 usado antes é incompatível com o Frappe
    v15 (freezegun quebra na coleta: `AttributeError: module 'uuid' has no attribute '_load_system_functions'`). O alvo
    de migração ao Frappe v16 é `>=3.13` (`target-version = "py313"`, `requires-python = ">=3.13"`, `linter.yml` e
@@ -37,6 +37,10 @@ tomadas ao aplicá-la no `busca_cnpj`.
     cobre pouco: pendência.
 11. commitlint mantido e `pre-commit install` documentado no `AGENTS.md`.
 12. Sem tag nem mudança de `__version__` nesta padronização.
+13. Python no CI: `linter.yml` e `ci.yml` (quando existe) rodam em **3.12**, igual à produção/homologação; o piso 3.11 continua em `requires-python` e `target-version`. Nunca 3.14 (o Frappe v15 não o suporta).
+14. Actions alinhadas em todos os workflows: `actions/checkout@v7`, `actions/setup-python@v7`, `actions/setup-node@v7`, `actions/cache@v6`. O `pre-commit/action` foi substituído por três passos (`pip install pre-commit`, `actions/cache@v6` de `~/.cache/pre-commit`, `pre-commit run --all-files`). Os workflows de CI/testes ganharam `workflow_dispatch` para validar sem PR, e o job `linter` roda também fora de PR.
+15. pip-audit informativo: o job obrigatório `deps-vulnerable-check` permanece. Foi adicionado o job separado `deps-vulnerable-check-stack` com `continue-on-error: true`, que audita o próprio app (o job obrigatório), o Frappe e o ERPNext `version-15`; achados aparecem no log, mas não deixam o gate vermelho.
+16. Dependências explícitas: imports reais auditados. `requests` vem do Frappe e `erpnext` está em `required_apps` (hooks) e em `[tool.bench.frappe-dependencies]`; o código não importa nenhum outro pacote externo. Nenhuma declaração faltava. Dependências fracas com guarda ficam documentadas, nunca em `required_apps`.
 
 ## Consequências
 
@@ -59,5 +63,5 @@ tomadas ao aplicá-la no `busca_cnpj`.
 ## Pendências
 
 - Migrar para `>=3.13` junto com o v16; revisar também as versões de prettier/eslint na preparação para o v16/v17.
-- Ampliar o pip-audit para cobrir as dependências erpnext/hrms (hoje comentadas).
+- Ampliar o pip-audit para cobrir as dependências erpnext/hrms (hoje comentadas). Parcialmente atendida pelo job informativo `deps-vulnerable-check-stack`; falta tornar o gate obrigatório após triar os achados.
 - Avaliar migrar o `.eslintrc` para a configuração flat quando o eslint for atualizado.
