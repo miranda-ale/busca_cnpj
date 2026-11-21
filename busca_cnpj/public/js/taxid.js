@@ -2,7 +2,10 @@ frappe.provide("busca_cnpj.taxid");
 
 // CNPJ pode ser alfanumérico; CPF é só dígitos (11).
 busca_cnpj.taxid.strip = function (value) {
-	return (value || "").toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 14);
+	return (value || "")
+		.toUpperCase()
+		.replace(/[^A-Z0-9]/g, "")
+		.slice(0, 14);
 };
 
 // Máscara progressiva: CPF (000.000.000-00) até 11 dígitos; acima disso, ou com letras, CNPJ (00.000.000/0000-00).

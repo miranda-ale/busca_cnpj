@@ -10,9 +10,7 @@ frappe.ui.form.on("Supplier", {
 		const base = strip_cnpj(raw);
 		if (base.length === 11 && /^\d{11}$/.test(base)) return;
 		if (!validate_cnpj(base)) {
-			frappe.throw(
-				__("CNPJ/CPF inválido: {0}. Verifique os dígitos informados.", [raw])
-			);
+			frappe.throw(__("CNPJ/CPF inválido: {0}. Verifique os dígitos informados.", [raw]));
 		}
 	},
 
@@ -25,7 +23,6 @@ frappe.ui.form.on("Supplier", {
 	},
 });
 
-
 // ---------------------------------------------------------------------------
 // CNPJ formatting & validation
 // ---------------------------------------------------------------------------
@@ -34,16 +31,23 @@ const CNPJ_WEIGHTS_1 = [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
 const CNPJ_WEIGHTS_2 = [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
 
 function strip_cnpj(value) {
-	return (value || "").toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 14);
+	return (value || "")
+		.toUpperCase()
+		.replace(/[^A-Z0-9]/g, "")
+		.slice(0, 14);
 }
 
 function format_cnpj(base) {
 	if (base.length !== 14) return base;
 	return (
-		base.slice(0, 2) + "." +
-		base.slice(2, 5) + "." +
-		base.slice(5, 8) + "/" +
-		base.slice(8, 12) + "-" +
+		base.slice(0, 2) +
+		"." +
+		base.slice(2, 5) +
+		"." +
+		base.slice(5, 8) +
+		"/" +
+		base.slice(8, 12) +
+		"-" +
 		base.slice(12)
 	);
 }
@@ -79,7 +83,6 @@ function format_cnpj_field(frm) {
 	}
 }
 
-
 // ---------------------------------------------------------------------------
 // Supplier name sanitization
 // ---------------------------------------------------------------------------
@@ -99,7 +102,6 @@ function sanitize_supplier_name(frm) {
 	}
 }
 
-
 // ---------------------------------------------------------------------------
 // Search button next to tax_id
 // ---------------------------------------------------------------------------
@@ -114,7 +116,9 @@ function setup_cnpj_button(frm) {
 
 	const $btn = $(`
 		<span class="btn-busca-cnpj" style="position:absolute;right:0;top:0;display:flex;align-items:center;height:100%;padding-right:8px;cursor:pointer;z-index:1">
-			<button class="btn btn-xs btn-primary" title="${__("Buscar CNPJ na Receita Federal")}" style="white-space:nowrap">
+			<button class="btn btn-xs btn-primary" title="${__(
+				"Buscar CNPJ na Receita Federal"
+			)}" style="white-space:nowrap">
 				${frappe.utils.icon("search", "xs")}
 				${__("Buscar")}
 			</button>
@@ -129,7 +133,6 @@ function setup_cnpj_button(frm) {
 		buscar_cnpj(frm);
 	});
 }
-
 
 // ---------------------------------------------------------------------------
 // Real-time CNPJ mask on input
@@ -153,7 +156,6 @@ function setup_cnpj_mask(frm) {
 		}
 	});
 }
-
 
 // ---------------------------------------------------------------------------
 // CNPJ search flow
@@ -189,7 +191,6 @@ function buscar_cnpj(frm) {
 		},
 	});
 }
-
 
 // ---------------------------------------------------------------------------
 // Confirmation modal
@@ -270,11 +271,15 @@ function show_cnpj_modal(frm, dados) {
 				</div>
 			</div>
 
-			${dados.nome_fantasia ? `
+			${
+				dados.nome_fantasia
+					? `
 			<div style="margin-bottom:8px">
 				<strong>${__("Nome Fantasia")}</strong><br>
 				${frappe.utils.escape_html(dados.nome_fantasia)}
-			</div>` : ""}
+			</div>`
+					: ""
+			}
 
 			<div class="row" style="margin-bottom:8px">
 				<div class="col-sm-6">
@@ -306,11 +311,15 @@ function show_cnpj_modal(frm, dados) {
 			${cnaes_html}
 			${socios_html}
 
-			${!dados.situacao_ativa ? `
+			${
+				!dados.situacao_ativa
+					? `
 			<div class="alert alert-warning" style="margin-top:10px">
 				<strong>${__("Atenção")}:</strong>
 				${__("Esta empresa não está com situação cadastral ATIVA na Receita Federal.")}
-			</div>` : ""}
+			</div>`
+					: ""
+			}
 		</div>
 	`;
 
@@ -335,7 +344,6 @@ function show_cnpj_modal(frm, dados) {
 	dialog.show();
 }
 
-
 // ---------------------------------------------------------------------------
 // Apply confirmed data
 // ---------------------------------------------------------------------------
@@ -346,21 +354,28 @@ function aplicar_dados_cnpj(frm, dados) {
 		frm.set_value("supplier_name", dados.razao_social);
 		frm.set_value("supplier_type", "Company");
 
-		frappe.show_alert({
-			message: __("Salvando fornecedor..."),
-			indicator: "blue",
-		}, 3);
+		frappe.show_alert(
+			{
+				message: __("Salvando fornecedor..."),
+				indicator: "blue",
+			},
+			3
+		);
 
-		frm.save().then(() => {
-			_chamar_confirmar(frm, dados);
-		}).catch((err) => {
-			frappe.msgprint({
-				title: __("Erro ao salvar fornecedor"),
-				message: __("Não foi possível salvar o fornecedor. Verifique se o CNPJ já está cadastrado."),
-				indicator: "red",
+		frm.save()
+			.then(() => {
+				_chamar_confirmar(frm, dados);
+			})
+			.catch((err) => {
+				frappe.msgprint({
+					title: __("Erro ao salvar fornecedor"),
+					message: __(
+						"Não foi possível salvar o fornecedor. Verifique se o CNPJ já está cadastrado."
+					),
+					indicator: "red",
+				});
+				console.error("Busca CNPJ - erro ao salvar:", err);
 			});
-			console.error("Busca CNPJ - erro ao salvar:", err);
-		});
 		return;
 	}
 
@@ -386,14 +401,19 @@ function _chamar_confirmar(frm, dados) {
 			if (res.cnaes_count) parts.push(__("{0} CNAEs", [res.cnaes_count]));
 
 			const warnings = [];
-			if (!res.address) warnings.push(__("Endereço não criado (dados insuficientes da Receita Federal)."));
-			if (!res.contact) warnings.push(__("Contato não criado (sem sócios, telefone ou e-mail)."));
+			if (!res.address)
+				warnings.push(__("Endereço não criado (dados insuficientes da Receita Federal)."));
+			if (!res.contact)
+				warnings.push(__("Contato não criado (sem sócios, telefone ou e-mail)."));
 
 			if (parts.length) {
-				frappe.show_alert({
-					message: __("Fornecedor atualizado! Vinculados: {0}.", [parts.join(", ")]),
-					indicator: "green",
-				}, 7);
+				frappe.show_alert(
+					{
+						message: __("Fornecedor atualizado! Vinculados: {0}.", [parts.join(", ")]),
+						indicator: "green",
+					},
+					7
+				);
 			}
 
 			if (warnings.length) {
@@ -413,7 +433,9 @@ function _chamar_confirmar(frm, dados) {
 		error(err) {
 			frappe.msgprint({
 				title: __("Erro ao confirmar dados"),
-				message: __("Ocorreu um erro ao preencher os dados do fornecedor. Verifique o Error Log."),
+				message: __(
+					"Ocorreu um erro ao preencher os dados do fornecedor. Verifique o Error Log."
+				),
 				indicator: "red",
 			});
 			console.error("Busca CNPJ - erro em confirmar_dados_cnpj:", err);
