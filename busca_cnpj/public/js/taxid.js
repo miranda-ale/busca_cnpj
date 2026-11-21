@@ -1,6 +1,6 @@
 frappe.provide("busca_cnpj.taxid");
 
-// CNPJ pode ser alfanumérico; CPF é só dígitos (11).
+// CNPJ may be alphanumeric; CPF is digits only (11).
 busca_cnpj.taxid.strip = function (value) {
 	return (value || "")
 		.toUpperCase()
@@ -8,7 +8,7 @@ busca_cnpj.taxid.strip = function (value) {
 		.slice(0, 14);
 };
 
-// Máscara progressiva: CPF (000.000.000-00) até 11 dígitos; acima disso, ou com letras, CNPJ (00.000.000/0000-00).
+// Progressive mask: CPF (000.000.000-00) up to 11 digits; above that, or with letters, CNPJ (00.000.000/0000-00).
 busca_cnpj.taxid.mask = function (value) {
 	const base = busca_cnpj.taxid.strip(value);
 	if (base.length <= 11 && /^\d*$/.test(base)) {
@@ -24,7 +24,7 @@ busca_cnpj.taxid.mask = function (value) {
 		.replace(/^(\w{2})\.(\w{3})\.(\w{3})\/(\w{4})(\w)/, "$1.$2.$3/$4-$5");
 };
 
-// Aplica a máscara enquanto o usuário digita e limita o tamanho (CNPJ mascarado = 18 caracteres).
+// Applies the mask while the user types and limits the length (masked CNPJ = 18 characters).
 busca_cnpj.taxid.bind_input = function (field) {
 	const $input = field && field.$input;
 	if (!$input || $input.data("taxid_mask_bound")) return;
