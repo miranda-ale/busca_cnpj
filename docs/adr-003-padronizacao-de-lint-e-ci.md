@@ -1,0 +1,58 @@
+# ADR-003: Padronização de lint e CI
+
+## Status
+
+Aceita (2026-11-21).
+
+## Contexto
+
+Os 10 apps Frappe do ecossistema estão sendo preparados para unificação e para a migração v15 -> v16/v17. Os apps
+divergiam em lint e CI (versão do Python, versão e regras do ruff, ignores, excludes do pre-commit, hooks de JS),
+o que dificulta revisar e mover código entre eles. Esta ADR registra a configuração comum adotada e as decisões
+tomadas ao aplicá-la no `busca_cnpj`.
+
+## Decisão
+
+1. Python 3.11 no CI, `target-version = "py311"` e `requires-python = ">=3.11"` (alvo a revisar para o v16).
+2. ruff fixado em v0.16.10 via `ruff-pre-commit`, regras `F,E,W,I,UP,B,RUF` e lista de `ignore` idêntica à do CLM.
+3. pyupgrade coberto pela regra `UP` do ruff, sem hook separado.
+4. F401 **não** é ignorado: imports mortos são removidos; reexportações/efeito colateral são mantidos com
+   `# noqa: F401  # <motivo>`. Strings visíveis ao usuário com caractere unicode ambíguo recebem
+   `# noqa: RUF001` em vez de alterar o texto.
+5. prettier 2.7.1 e eslint 8.44.0 mantidos (atualização adiada, para não misturar com a padronização; revisar na
+   preparação para v16/v17).
+6. Os `exclude` do pre-commit são sempre caminhos do próprio repositório; entradas mortas foram removidas, sem
+   ampliar o escopo ignorado.
+7. Globais de ESLint são declaradas no `.eslintrc` com escopo mínimo. Neste repositório: apenas `busca_cnpj`
+   (`"writable"`), namespace do próprio app criado por `frappe.provide`. Nenhum `overrides` necessário.
+8. Arquivos JS com Jinja são excluídos de prettier/eslint por caminho exato. Neste repositório: nenhum.
+9. JS formatado pelo prettier em commit exclusivo de estilo. Neste repositório: 3 arquivos
+   (`cep.js`, `supplier.js`, `taxid.js`).
+10. O pip-audit roda só no CI e audita apenas o `pyproject` (as dependências erpnext/hrms ficam comentadas), então
+    cobre pouco: pendência.
+11. commitlint mantido e `pre-commit install` documentado no `AGENTS.md`.
+12. Sem tag nem mudança de `__version__` nesta padronização.
+
+## Consequências
+
+- Lint e formatação idênticos entre os apps, facilitando a unificação e a revisão cruzada.
+- Imports mortos aparecem como erro (F401) e precisam de remoção ou `noqa` justificado.
+- Versões de prettier/eslint ficam defasadas até a preparação para o v16/v17.
+- O ESLint passa a validar de fato o JS; o namespace `busca_cnpj` é aceito como global, mas erros de digitação
+  nele deixam de ser detectados.
+
+## Estado deste repositório
+
+| Item | Estado |
+| --- | --- |
+| F401 | 1 import removido (`import frappe` em `cnae_fornecedor.py`, commit `fix: corrigir erros do ruff check`); 0 mantidos com `noqa`; `F401` removido do ignore no `pyproject.toml` |
+| Excludes alterados | Removidas entradas mortas de prettier e eslint (`public/dist`, `templates/includes`, `public/js/lib`, `cypress`); mantidos `node_modules` e `boilerplate` |
+| ESLint | `no-undef` de `busca_cnpj` (25 ocorrências em 5 arquivos) resolvido com a global; nenhum bug real encontrado |
+| Prettier | 3 arquivos JS reformatados (apenas estilo) |
+| pre-commit (`SKIP=commitlint pre-commit run --all-files`) | Todos os hooks passam |
+
+## Pendências
+
+- Revisar o alvo Python (3.11) e as versões de prettier/eslint na preparação para o v16/v17.
+- Ampliar o pip-audit para cobrir as dependências erpnext/hrms (hoje comentadas).
+- Avaliar migrar o `.eslintrc` para a configuração flat quando o eslint for atualizado.
