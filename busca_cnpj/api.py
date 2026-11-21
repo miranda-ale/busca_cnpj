@@ -2,11 +2,9 @@ import json
 import re
 import unicodedata
 
-import requests
-
 import frappe
+import requests
 from frappe import _
-
 
 from busca_cnpj.cnpj import formatar_cnpj, normalizar_cnpj, validar_cnpj
 
