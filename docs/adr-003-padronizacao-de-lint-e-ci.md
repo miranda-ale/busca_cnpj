@@ -39,8 +39,9 @@ tomadas ao aplicá-la no `busca_cnpj`.
 12. Sem tag nem mudança de `__version__` nesta padronização.
 13. Python no CI: `linter.yml` e `ci.yml` (quando existe) rodam em **3.12**, igual à produção/homologação; o piso 3.11 continua em `requires-python` e `target-version`. Nunca 3.14 (o Frappe v15 não o suporta).
 14. Actions alinhadas em todos os workflows: `actions/checkout@v7`, `actions/setup-python@v7`, `actions/setup-node@v7`, `actions/cache@v6`. O `pre-commit/action` foi substituído por três passos (`pip install pre-commit`, `actions/cache@v6` de `~/.cache/pre-commit`, `pre-commit run --all-files`). Os workflows de CI/testes ganharam `workflow_dispatch` para validar sem PR, e o job `linter` roda também fora de PR.
-15. pip-audit informativo: o job obrigatório `deps-vulnerable-check` permanece. Foi adicionado o job separado `deps-vulnerable-check-stack` com `continue-on-error: true`, que audita o próprio app (o job obrigatório), o Frappe e o ERPNext `version-15`; achados aparecem no log, mas não deixam o gate vermelho.
+15. pip-audit informativo: o job obrigatório `deps-vulnerable-check` permanece e audita este app. Foi adicionado o job separado `deps-vulnerable-check-stack` com `continue-on-error: true`, que clona o Frappe e o ERPNext `version-15` do GitHub e roda `pip-audit` sobre essas cópias (os requisitos declarados por elas). Não audita este app nem as versões efetivamente instaladas no ambiente; achados aparecem no log, mas não deixam o gate vermelho.
 16. Dependências explícitas: imports reais auditados. `requests` vem do Frappe e `erpnext` está em `required_apps` (hooks) e em `[tool.bench.frappe-dependencies]`; o código não importa nenhum outro pacote externo. Nenhuma declaração faltava. Dependências fracas com guarda ficam documentadas, nunca em `required_apps`.
+17. Semgrep em varredura completa: o passo roda `semgrep scan --error --metrics=off` com as regras do `frappe/semgrep-rules` e `r/python.lang.correctness` sobre todo o repositório (PR, push na `main` e `workflow_dispatch`), igual nos demais apps. Não usa `semgrep ci`, que em PR analisa só o diff; qualquer achado reprova o job.
 
 ## Consequências
 
