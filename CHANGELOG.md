@@ -30,7 +30,9 @@ commit marcado pela tag. A entrada "Não lançado" vem de commits posteriores à
   `cep.js` + `taxid.js`. Usado pelo `integracoes_customizadas` (Processo Judicial); `__version__` não mudou.
 - `confirmar_dados_cnpj` passa a aceitar só POST (`@frappe.whitelist(methods=["POST"])`; o único chamador JS usa
   `frappe.call`, que é POST) e troca o `frappe.db.commit()` antes do rename do Fornecedor por um savepoint, revertido se
-  o rename falhar por duplicidade. Corrige os achados `whitelisted-side-effect-on-get` e `frappe-manual-commit` do
+  o rename falhar. **Mudança de comportamento:** em caso de erro no rename, o save anterior do Fornecedor agora também é
+  revertido (antes ficava persistido pelo commit); só o rename duplicado é tratado (log e segue com o nome original), e
+  os demais erros propagam. Corrige os achados `whitelisted-side-effect-on-get` e `frappe-manual-commit` do
   Semgrep; sem mudança de `__version__`.
 
 ## v2.0.0 — Dependências fixadas · 2026-11-02

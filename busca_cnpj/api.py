@@ -279,6 +279,10 @@ def confirmar_dados_cnpj(supplier_name: str, dados: str) -> dict:
 				title="Busca CNPJ: rename falhou",
 				message=f"Supplier '{new_razao}' já existe. Mantendo nome original.",
 			)
+		except Exception:
+			# Qualquer outro erro (ex.: ValidationError) não é engolido: desfaz o rename parcial e propaga.
+			frappe.db.rollback(save_point=SAVEPOINT_RENOMEAR_SUPPLIER)
+			raise
 		supplier = frappe.get_doc("Supplier", frappe.db.exists("Supplier", new_razao) or old_name)
 	else:
 		if new_razao:

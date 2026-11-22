@@ -64,7 +64,7 @@ Também é usado por outro app do bench: o `integracoes_customizadas` depende de
   dos provedores públicos (definidos por eles, sujeitos a mudança) valem para o IP do servidor. O mesmo vale para
   quem chama `buscar_cnpj` em lote (por exemplo a importação Bionexo).
 - Os métodos `busca_cnpj.api.buscar_cnpj`, `buscar_cep` e `confirmar_dados_cnpj` são `@frappe.whitelist()` (exigem
-  usuário logado); `confirmar_dados_cnpj`, que grava, aceita só POST (`methods=["POST"]`) e não faz commit manual. `confirmar_dados_cnpj` grava com `ignore_permissions=True`: quem pode chamá-lo pelo Desk não
+  usuário logado). `confirmar_dados_cnpj` aceita só POST e grava com `ignore_permissions=True`: quem pode chamá-lo pelo Desk não
   passa pela checagem de permissão de Fornecedor.
 
 ## Uso por outros apps
