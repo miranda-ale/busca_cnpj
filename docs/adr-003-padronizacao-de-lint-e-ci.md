@@ -13,7 +13,12 @@ decisions made when applying it to `busca_cnpj`.
 
 ## Decision
 
-1. Python 3.11 in CI, `target-version = "py311"` and `requires-python = ">=3.11"` (target to be reviewed for v16).
+1. Python version: the current minimum **3.11 is kept** (`target-version = "py311"`, `requires-python = ">=3.11"`,
+   `linter.yml` on 3.11) because of a production constraint. Production and staging were confirmed on **Python 3.12**,
+   and `ci.yml` now runs the tests on 3.12 to mirror production; the 3.14 used before is incompatible with Frappe v15
+   (freezegun breaks at collection: `AttributeError: module 'uuid' has no attribute '_load_system_functions'`). The
+   migration target for Frappe v16 is `>=3.13` (`target-version = "py313"`, `requires-python = ">=3.13"`,
+   `linter.yml` and `ci.yml` consistent), to be done in the migration itself.
 2. ruff pinned to v0.16.10 through `ruff-pre-commit`, rules `F,E,W,I,UP,B,RUF` and an `ignore` list identical to
    CLM's.
 3. pyupgrade covered by ruff's `UP` rule, with no separate hook.
@@ -54,6 +59,6 @@ decisions made when applying it to `busca_cnpj`.
 
 ## Pending
 
-- Review the Python target (3.11) and the prettier/eslint versions when preparing for v16/v17.
+- Migrate to `>=3.13` together with v16; also review the prettier/eslint versions when preparing for v16/v17.
 - Extend pip-audit to cover the erpnext/hrms dependencies (currently commented out).
 - Evaluate migrating `.eslintrc` to the flat configuration when eslint is upgraded.
