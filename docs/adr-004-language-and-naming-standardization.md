@@ -62,9 +62,11 @@ Private helpers (`_consultar_api`, `_normalizar_cnpjws`, `_criar_endereco`, `_cr
 Kept so that unmigrated consumers keep working:
 
 - `busca_cnpj.api.buscar_cnpj`, `busca_cnpj.api.buscar_cep` and `busca_cnpj.api.confirmar_dados_cnpj` (all still
-  `@frappe.whitelist()`, delegating to the English functions);
-- `busca_cnpj.api.formatar_cep`, `formatar_telefone`, `sanitizar_razao_social`;
-- `busca_cnpj.cnpj.normalizar_cnpj`, `validar_cnpj`, `formatar_cnpj`, `validar_cpf`, `validar_tax_id`,
+  whitelisted, delegating to the English functions; `confirmar_dados_cnpj` is **POST-only**, like
+  `confirm_cnpj_data`, so the alias does not reopen GET);
+- `busca_cnpj.api.formatar_cep`, `formatar_telefone`, `sanitizar_razao_social` and the constant
+  `SAVEPOINT_RENOMEAR_SUPPLIER` (now `SAVEPOINT_RENAME_SUPPLIER`);
+- `busca_cnpj.cnpj.normalizar_cnpj`, `validar_cnpj`, `formatar_cnpj`, `validar_cpf`, `validar_tax_id` (also accepts the old `valor=` keyword),
   `valor_caractere`;
 - `busca_cnpj.setup.ajustar_layout_address`, `desativar_scripts_cnpj_legado`.
 
@@ -82,6 +84,12 @@ grep -rnE "buscar_cnpj|confirmar_dados_cnpj|buscar_cep|formatar_cnpj|normalizar_
 
 An empty result (apart from this app) means the aliases are safe to delete. Also check Client Scripts, Server Scripts
 and custom code stored on the sites, which a repository grep cannot see.
+
+### Merge with main (CI fixes, PR #4)
+
+`main` made `confirmar_dados_cnpj` POST-only and replaced its manual `frappe.db.commit()` with a savepoint that is
+rolled back on a failed rename (non-duplicate errors now propagate). That behavior was carried over to
+`confirm_cnpj_data`, and its tests were adapted to exercise both the new name and the alias.
 
 ### Metadata and documentation
 

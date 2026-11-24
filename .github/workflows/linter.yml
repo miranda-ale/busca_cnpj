@@ -2,6 +2,8 @@
 name: Linters
 
 on:
+  push:
+    branches: [main]
   pull_request:
   workflow_dispatch:
 
@@ -19,10 +21,10 @@ jobs:
     if: github.event_name == 'pull_request'
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 200
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 20
 
@@ -34,37 +36,50 @@ jobs:
   linter:
     name: 'Frappe Linter'
     runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request'
 
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
-          python-version: '3.11'
+          python-version: '3.12'
           cache: pip
-      - uses: pre-commit/action@v3.0.0
+      # Passos de pre-commit/action@v3.0.1 (composite que usa actions/cache@v4 em Node 20 deprecado),
+      # reescritos aqui para usar actions/cache@v6.
+      - name: Install pre-commit
+        run: python -m pip install pre-commit
+
+      - name: Cache pre-commit
+        uses: actions/cache@v6
+        with:
+          path: ~/.cache/pre-commit
+          key: pre-commit-3|${{ env.pythonLocation }}|${{ hashFiles('.pre-commit-config.yaml') }}
+
+      - name: Run pre-commit
+        run: pre-commit run --show-diff-on-failure --color=always --all-files
 
       - name: Download Semgrep rules
         run: git clone --depth 1 https://github.com/frappe/semgrep-rules.git frappe-semgrep-rules
 
+      # Varredura completa do repositório (PR, push na main e dispatch), sem modo diff do `semgrep ci`;
+      # qualquer achado reprova o job (--error).
       - name: Run Semgrep rules
         run: |
           pip install semgrep
-          semgrep ci --config ./frappe-semgrep-rules/rules --config r/python.lang.correctness
+          semgrep scan --error --metrics=off --config ./frappe-semgrep-rules/rules --config r/python.lang.correctness .
 
   deps-vulnerable-check:
     name: 'Vulnerable Dependency Check'
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
-          python-version: '3.11'
+          python-version: '3.12'
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Cache pip
-        uses: actions/cache@v3
+        uses: actions/cache@v6
         with:
           path: ~/.cache/pip
           key: ${{ runner.os }}-pip-${{ hashFiles('**/*requirements.txt', '**/pyproject.toml', '**/setup.py') }}
@@ -77,3 +92,23 @@ jobs:
           pip install pip-audit
           cd ${GITHUB_WORKSPACE}
           pip-audit --desc on .
+
+  # Informativo: audita o stack Frappe nas versões usadas (branch version-15) e não bloqueia o gate.
+  deps-vulnerable-check-stack:
+    name: 'Vulnerable Dependency Check (stack Frappe, informativo)'
+    runs-on: ubuntu-latest
+    continue-on-error: true
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+
+      - name: Audit Frappe stack
+        run: |
+          pip install pip-audit
+          git clone --depth 1 --branch version-15 https://github.com/frappe/frappe.git frappe-src
+          git clone --depth 1 --branch version-15 https://github.com/frappe/erpnext.git erpnext-src
+          pip-audit --desc on ./frappe-src ./erpnext-src

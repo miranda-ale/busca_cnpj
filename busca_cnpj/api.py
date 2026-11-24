@@ -12,6 +12,7 @@ BRASILAPI_BASE_URL = "https://brasilapi.com.br/api/cnpj/v1"
 MINHA_RECEITA_BASE_URL = "https://minhareceita.org"
 CNPJWS_BASE_URL = "https://publica.cnpj.ws/cnpj"
 VIACEP_BASE_URL = "https://viacep.com.br/ws"
+SAVEPOINT_RENAME_SUPPLIER = "busca_cnpj_renomear_supplier"
 
 
 def format_cep(cep: str) -> str:
@@ -248,7 +249,7 @@ def lookup_cep(cep: str) -> dict:
 	}
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["POST"])
 def confirm_cnpj_data(supplier_name: str, data: str) -> dict:
 	if isinstance(data, str):
 		data = json.loads(data)
@@ -267,14 +268,21 @@ def confirm_cnpj_data(supplier_name: str, data: str) -> dict:
 	if naming_by_name and new_legal_name and new_legal_name != old_name:
 		supplier.supplier_name = old_name
 		supplier.save(ignore_permissions=True)
-		frappe.db.commit()
+		# Savepoint instead of a manual commit: if the rename fails, only it is undone and the save above stays in
+		# the request transaction (committed at the end of the request).
+		frappe.db.savepoint(SAVEPOINT_RENAME_SUPPLIER)
 		try:
 			frappe.rename_doc("Supplier", old_name, new_legal_name, merge=False)
 		except frappe.DuplicateEntryError:
+			frappe.db.rollback(save_point=SAVEPOINT_RENAME_SUPPLIER)
 			frappe.log_error(
 				title="Busca CNPJ: rename falhou",
 				message=f"Supplier '{new_legal_name}' já existe. Mantendo nome original.",
 			)
+		except Exception:
+			# Any other error (e.g. ValidationError) is not swallowed: undo the partial rename and propagate.
+			frappe.db.rollback(save_point=SAVEPOINT_RENAME_SUPPLIER)
+			raise
 		supplier = frappe.get_doc("Supplier", frappe.db.exists("Supplier", new_legal_name) or old_name)
 	else:
 		if new_legal_name:
@@ -440,7 +448,7 @@ def buscar_cnpj(cnpj: str) -> dict:
 	return lookup_cnpj(cnpj)
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["POST"])
 def confirmar_dados_cnpj(supplier_name: str, dados: str) -> dict:
 	return confirm_cnpj_data(supplier_name, dados)
 
@@ -449,3 +457,4 @@ def confirmar_dados_cnpj(supplier_name: str, dados: str) -> dict:
 formatar_cep = format_cep
 formatar_telefone = format_phone
 sanitizar_razao_social = sanitize_company_name
+SAVEPOINT_RENOMEAR_SUPPLIER = SAVEPOINT_RENAME_SUPPLIER

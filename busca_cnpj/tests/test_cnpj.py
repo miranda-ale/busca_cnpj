@@ -1,7 +1,10 @@
 # Copyright (c) 2026, StillPulse Tecnologia LTDA and contributors
 # For license information, please see license.txt
 
+import inspect
+import json
 import unittest
+from unittest import mock
 
 from busca_cnpj.cnpj import character_value, format_cnpj, normalize_cnpj, validate_cnpj
 
@@ -56,7 +59,13 @@ class TestAlphanumericCnpj(unittest.TestCase):
 		self.assertIs(cnpj.formatar_cnpj, cnpj.format_cnpj)
 		self.assertIs(cnpj.normalizar_cnpj, cnpj.normalize_cnpj)
 		self.assertIs(cnpj.validar_cpf, cnpj.validate_cpf)
-		self.assertIs(cnpj.validar_tax_id, cnpj.validate_tax_id)
+
+	def test_validar_tax_id_alias_accepts_valor_keyword(self):
+		from busca_cnpj import cnpj
+
+		self.assertTrue(cnpj.validar_tax_id(valor="00.000.000/0001-91"))
+		self.assertTrue(cnpj.validar_tax_id("00.000.000/0001-91"))
+		self.assertFalse(cnpj.validar_tax_id(valor="00.000.000/E08G-99"))
 
 	def test_character_value_alias(self):
 		from busca_cnpj import cnpj
@@ -78,6 +87,7 @@ class TestDeprecatedApiAliases(unittest.TestCase):
 		"MINHA_RECEITA_BASE_URL",
 		"CNPJWS_BASE_URL",
 		"VIACEP_BASE_URL",
+		"SAVEPOINT_RENOMEAR_SUPPLIER",
 	)
 	EXPECTED_CNPJ_NAMES = (
 		"normalizar_cnpj",
@@ -132,6 +142,75 @@ class TestDeprecatedApiAliases(unittest.TestCase):
 		with patch.object(api, "lookup_cnpj", return_value={"ok": 1}) as mocked:
 			self.assertEqual(api.buscar_cnpj("00000000000191"), {"ok": 1})
 		mocked.assert_called_once_with("00000000000191")
+
+
+class TestConfirmCnpjData(unittest.TestCase):
+	"""Regression for the Semgrep findings: no manual commit and no GET on a method that writes."""
+
+	def setUp(self):
+		try:
+			import frappe
+
+			from busca_cnpj import api
+		except ModuleNotFoundError as exc:
+			self.skipTest(f"needs frappe: {exc}")
+		self.frappe = frappe
+		self.api = api
+
+	def test_post_only_for_new_name_and_alias(self):
+		allowed = getattr(self.frappe, "allowed_http_methods_for_whitelisted_func", None)
+		if allowed is None:
+			self.skipTest("frappe.allowed_http_methods_for_whitelisted_func not available (stub frappe)")
+		self.assertEqual(allowed[self.api.confirm_cnpj_data], ["POST"])
+		self.assertEqual(allowed[self.api.confirmar_dados_cnpj], ["POST"])
+
+	def _confirm(self, function_name, rename_error):
+		"""Run the confirmation with a failing rename; return (result, error, savepoint, rollback, commit)."""
+		api = self.api
+		supplier = mock.MagicMock()
+		supplier.name = "Antigo"
+		data = {"razao_social": "Novo", "cnpj_formatado": "00.000.000/0001-91"}
+		with (
+			mock.patch.object(api.frappe.defaults, "get_global_default", return_value="Supplier Name"),
+			mock.patch.object(api.frappe, "get_doc", return_value=supplier),
+			mock.patch.object(api.frappe, "rename_doc", side_effect=rename_error),
+			mock.patch.object(api.frappe, "log_error"),
+			mock.patch.object(api.frappe.db, "exists", return_value=None),
+			mock.patch.object(api.frappe.db, "savepoint") as savepoint,
+			mock.patch.object(api.frappe.db, "rollback") as rollback,
+			mock.patch.object(api.frappe.db, "commit") as commit,
+			mock.patch.object(api, "_create_address", return_value=None),
+			mock.patch.object(api, "_create_contact", return_value=None),
+		):
+			try:
+				result = getattr(api, function_name)("Antigo", json.dumps(data))
+				error = None
+			except Exception as exc:
+				result, error = None, exc
+		return result, error, savepoint, rollback, commit
+
+	def test_duplicate_rename_undoes_only_the_rename_without_commit(self):
+		for function_name in ("confirm_cnpj_data", "confirmar_dados_cnpj"):
+			result, error, savepoint, rollback, commit = self._confirm(
+				function_name, self.frappe.DuplicateEntryError
+			)
+			self.assertIsNone(error)
+			commit.assert_not_called()
+			savepoint.assert_called_once_with(self.api.SAVEPOINT_RENAME_SUPPLIER)
+			rollback.assert_called_once_with(save_point=self.api.SAVEPOINT_RENAME_SUPPLIER)
+			self.assertEqual(result["supplier"], "Antigo")
+
+	def test_validation_error_in_rename_rolls_back_and_propagates(self):
+		for function_name in ("confirm_cnpj_data", "confirmar_dados_cnpj"):
+			_, error, _, rollback, commit = self._confirm(
+				function_name, self.frappe.ValidationError("invalid rename")
+			)
+			self.assertIsInstance(error, self.frappe.ValidationError)
+			commit.assert_not_called()
+			rollback.assert_called_once_with(save_point=self.api.SAVEPOINT_RENAME_SUPPLIER)
+
+	def test_no_manual_commit_in_module(self):
+		self.assertNotIn("db.commit", inspect.getsource(self.api))
 
 
 if __name__ == "__main__":

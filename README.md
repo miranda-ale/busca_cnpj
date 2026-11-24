@@ -66,7 +66,7 @@ It is also used by another app on the bench: `integracoes_customizadas` depends 
   whoever calls `lookup_cnpj` in bulk (for example the Bionexo import).
 - The methods `busca_cnpj.api.lookup_cnpj`, `lookup_cep` and `confirm_cnpj_data` (and the deprecated aliases
   `buscar_cnpj` and `confirmar_dados_cnpj`) are `@frappe.whitelist()` (they require a logged-in user).
-  `confirm_cnpj_data` writes with `ignore_permissions=True`: whoever can call it from the Desk does not go through
+  `confirm_cnpj_data` (and its alias) accepts POST only and writes with `ignore_permissions=True`: whoever can call it from the Desk does not go through
   the Supplier permission check.
 
 ## Use by other apps
@@ -164,7 +164,7 @@ bench --site <site> run-tests --module busca_cnpj.tests.test_cnpj
 ```
 
 **Not covered**: `lookup_cnpj`, `_query_api` and the fallback between sources, `_normalize_cnpjws`, `lookup_cep`,
-`confirm_cnpj_data` (rename, Address, Contact, CNAEs), `sanitize_company_name`, phone and CEP formatters,
+`confirm_cnpj_data` (rename, Address, Contact, CNAEs; only the POST restriction, the savepoint rollback and the absence of a manual commit are tested), `sanitize_company_name`, phone and CEP formatters,
 `validate_cpf`, `supplier_validate`, `setup.py` (Custom Fields and disabling of legacy scripts) and all of the
 JavaScript. There are no HTTP mocks.
 

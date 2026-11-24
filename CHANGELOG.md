@@ -29,6 +29,7 @@ that of the commit marked by the tag. The "Unreleased" entries come from commits
   `validate_cpf`, `validate_tax_id`, ...); comments, docstrings and documentation translated to English. The old
   Portuguese names of the functions used by `integracoes_customizadas` remain as deprecated aliases (including `buscar_cep`, `formatar_cep`, `formatar_telefone`, `sanitizar_razao_social`, `valor_caractere` and the `setup.py` helpers). DocType,
   fieldnames, payload keys and user-facing messages are unchanged.
+- `validar_tax_id` (deprecated alias) also accepts the old `valor=` keyword.
 - Metadata: publisher StillPulse Tecnologia LTDA, proprietary license, `required_apps` as
   `frappe/frappe@version-15` and `frappe/erpnext@version-15`; new [docs/dependencies.md](docs/dependencies.md) and
   [ADR-004](docs/adr-004-language-and-naming-standardization.md).
@@ -38,6 +39,13 @@ that of the commit marked by the tag. The "Unreleased" entries come from commits
 - Commit `b67b505` ("feat: máscara progressiva de CPF/CNPJ global"): new `public/js/taxid.js` (`busca_cnpj.taxid`:
   `strip`, `mask`, `bind_input`) loaded across the whole Desk; `app_include_js` in `hooks.py` becomes the list
   `cep.js` + `taxid.js`. Used by `integracoes_customizadas` (Processo Judicial); `__version__` did not change.
+- `confirmar_dados_cnpj` (now `confirm_cnpj_data`) accepts POST only (`@frappe.whitelist(methods=["POST"])`; the only JS
+  caller uses `frappe.call`, which is POST) and replaces the `frappe.db.commit()` before the Supplier rename with a
+  savepoint, rolled back if the rename fails. **Behavior change:** if the rename fails, the previous Supplier save is
+  now also rolled back (before, it stayed persisted by the commit); only the duplicate rename is handled (logged, and
+  the original name is kept) and any other error propagates. Fixes the Semgrep findings
+  `whitelisted-side-effect-on-get` and `frappe-manual-commit`; `__version__` unchanged. The deprecated alias
+  `confirmar_dados_cnpj` is also POST-only and delegates to `confirm_cnpj_data`.
 
 ## v2.0.0 — Pinned dependencies · 2026-11-02
 

@@ -88,5 +88,11 @@ normalizar_cnpj = normalize_cnpj
 validar_cnpj = validate_cnpj
 formatar_cnpj = format_cnpj
 validar_cpf = validate_cpf
-validar_tax_id = validate_tax_id
 valor_caractere = character_value
+
+
+def validar_tax_id(valor: str | None = None, **kwargs) -> bool:
+	"""Deprecated alias of `validate_tax_id`; also accepts the old `valor=` keyword."""
+	if valor is None and "value" in kwargs:
+		valor = kwargs["value"]
+	return validate_tax_id(valor)
