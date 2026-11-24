@@ -12,6 +12,7 @@ BRASILAPI_BASE_URL = "https://brasilapi.com.br/api/cnpj/v1"
 MINHA_RECEITA_BASE_URL = "https://minhareceita.org"
 CNPJWS_BASE_URL = "https://publica.cnpj.ws/cnpj"
 VIACEP_BASE_URL = "https://viacep.com.br/ws"
+SAVEPOINT_RENOMEAR_SUPPLIER = "busca_cnpj_renomear_supplier"
 
 
 def formatar_cep(cep: str) -> str:
@@ -248,7 +249,7 @@ def buscar_cep(cep: str) -> dict:
 	}
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["POST"])
 def confirmar_dados_cnpj(supplier_name: str, dados: str) -> dict:
 	if isinstance(dados, str):
 		dados = json.loads(dados)
@@ -267,14 +268,21 @@ def confirmar_dados_cnpj(supplier_name: str, dados: str) -> dict:
 	if naming_by_name and new_razao and new_razao != old_name:
 		supplier.supplier_name = old_name
 		supplier.save(ignore_permissions=True)
-		frappe.db.commit()
+		# Ponto de retorno em vez de commit manual: se o rename falhar por duplicidade, só ele é desfeito e o
+		# save acima permanece na transação da requisição (confirmada ao fim dela).
+		frappe.db.savepoint(SAVEPOINT_RENOMEAR_SUPPLIER)
 		try:
 			frappe.rename_doc("Supplier", old_name, new_razao, merge=False)
 		except frappe.DuplicateEntryError:
+			frappe.db.rollback(save_point=SAVEPOINT_RENOMEAR_SUPPLIER)
 			frappe.log_error(
 				title="Busca CNPJ: rename falhou",
 				message=f"Supplier '{new_razao}' já existe. Mantendo nome original.",
 			)
+		except Exception:
+			# Qualquer outro erro (ex.: ValidationError) não é engolido: desfaz o rename parcial e propaga.
+			frappe.db.rollback(save_point=SAVEPOINT_RENOMEAR_SUPPLIER)
+			raise
 		supplier = frappe.get_doc("Supplier", frappe.db.exists("Supplier", new_razao) or old_name)
 	else:
 		if new_razao:

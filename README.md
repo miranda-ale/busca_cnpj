@@ -64,7 +64,7 @@ Também é usado por outro app do bench: o `integracoes_customizadas` depende de
   dos provedores públicos (definidos por eles, sujeitos a mudança) valem para o IP do servidor. O mesmo vale para
   quem chama `buscar_cnpj` em lote (por exemplo a importação Bionexo).
 - Os métodos `busca_cnpj.api.buscar_cnpj`, `buscar_cep` e `confirmar_dados_cnpj` são `@frappe.whitelist()` (exigem
-  usuário logado). `confirmar_dados_cnpj` grava com `ignore_permissions=True`: quem pode chamá-lo pelo Desk não
+  usuário logado). `confirmar_dados_cnpj` aceita só POST e grava com `ignore_permissions=True`: quem pode chamá-lo pelo Desk não
   passa pela checagem de permissão de Fornecedor.
 
 ## Uso por outros apps
@@ -154,7 +154,7 @@ bench --site <site> run-tests --module busca_cnpj.tests.test_cnpj
 ```
 
 **Não são cobertos**: `buscar_cnpj`, `_consultar_api` e contingência entre fontes, `_normalizar_cnpjws`, `buscar_cep`,
-`confirmar_dados_cnpj` (renomeação, Endereço, Contato, CNAEs), `sanitizar_razao_social`, formatadores de telefone e
+`confirmar_dados_cnpj` (renomeação, Endereço, Contato, CNAEs; só a restrição a POST e a ausência de commit manual têm teste), `sanitizar_razao_social`, formatadores de telefone e
 CEP, `validar_cpf`, `supplier_validate`, `setup.py` (Custom Fields e desativação de scripts legados) e todo o
 JavaScript. Não há mocks de HTTP.
 
