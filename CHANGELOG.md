@@ -1,88 +1,100 @@
 # Changelog
 
-Histórico reconstruído de `git tag` e `git log` do app (somente leitura) e conferido com os arquivos. A data é a do
-commit marcado pela tag. A entrada "Não lançado" vem de commits posteriores à `v1.3.6`.
+History reconstructed from the app's `git tag` and `git log` (read-only) and checked against the files. The date is
+that of the commit marked by the tag. The "Unreleased" entries come from commits after `v1.3.6` / `v2.0.0`.
 
-## Limites do histórico git
+## Git history limits
 
-- **Início do histórico:** o HEAD tem **uma única raiz**, `77634c3` ("docs: reescreve README", 2026-10-13), marcada pela
-  tag `v1.3.2`. Ela já traz o app inteiro (API, JS, DocType, testes, CI); o git do HEAD não mostra como as funções
-  surgiram. O DocType `CNAE Fornecedor` tem `creation` de 2026-02-23 no JSON, anterior ao histórico: houve trabalho
-  prévio fora dele.
-- **Tags fora do histórico:** `v1.3.1` (commit `6462d12`, 2026-10-08, "chore(pyproject): declara frappe-dependencies e
-  documenta dependencias") não é ancestral do HEAD (`git tag --no-merged HEAD`) e é uma segunda raiz. Entra abaixo só
-  pelo assunto, como entrada de faixa, e não é parte do app.
-- **Tipos de tag:** `v1.3.2` e `v1.3.3` são anotadas; `v1.3.1`, `v1.3.4`, `v1.3.5` e `v1.3.6` são leves. Não há tags
-  `rc/*`.
-- **Datas de tag:** `v1.3.3` a `v1.3.6` caem no mesmo dia (2026-10-28), em sequência de commits de CI e versão.
-- **Sem tag:** o commit `b67b505` (2026-10-31) é posterior à `v1.3.6` e não alterou `__version__` (continua `1.3.6`).
-- **`__version__` x `app_version`:** `busca_cnpj/__init__.py` foi `1.2.2` nas tags `v1.3.1` e `v1.3.2` (a `v1.3.2` saiu
-  com `__version__` desatualizado, o que a `v1.3.3` corrigiu) e acompanha a tag de `v1.3.3` em diante (`1.3.6` no
-  HEAD, mesmo depois de `b67b505`). O `hooks.py` não define `app_version`.
-- **Patches:** não há (`patches.txt` só com os cabeçalhos). Nada a observar sobre numeração.
-- As mensagens de commit são curtas; o conteúdo de cada entrada foi conferido nos arquivos de cada commit
-  (`git show --stat`).
+- **Start of history:** the HEAD has **a single root**, `77634c3` ("docs: reescreve README", 2026-10-13), marked by
+  tag `v1.3.2`. It already brings the whole app (API, JS, DocType, tests, CI); the HEAD's git does not show how the
+  functions came about. The `CNAE Fornecedor` DocType has a `creation` of 2026-02-23 in its JSON, earlier than the
+  history: there was prior work outside it.
+- **Tags outside the history:** `v1.3.1` (commit `6462d12`, 2026-10-08, "chore(pyproject): declara
+  frappe-dependencies e documenta dependencias") is not an ancestor of HEAD (`git tag --no-merged HEAD`) and is a
+  second root. It appears below only by subject, as a range entry, and is not part of the app.
+- **Tag types:** `v1.3.2` and `v1.3.3` are annotated; `v1.3.1`, `v1.3.4`, `v1.3.5` and `v1.3.6` are lightweight.
+  There are no `rc/*` tags.
+- **Tag dates:** `v1.3.3` to `v1.3.6` fall on the same day (2026-10-28), in a sequence of CI and version commits.
+- **No tag:** commit `b67b505` (2026-10-31) is after `v1.3.6` and did not change `__version__` (it stayed `1.3.6`).
+- **`__version__` vs `app_version`:** `busca_cnpj/__init__.py` was `1.2.2` in tags `v1.3.1` and `v1.3.2` (`v1.3.2`
+  went out with an outdated `__version__`, which `v1.3.3` fixed) and follows the tag from `v1.3.3` on (`1.3.6` at
+  that HEAD, even after `b67b505`). `hooks.py` does not define `app_version`.
+- **Patches:** there are none (`patches.txt` has only the headers). Nothing to note about numbering.
+- Commit messages are short; the content of each entry was checked in the files of each commit (`git show --stat`).
 
-## Não lançado · 2026-10-31
+## Unreleased
 
-- Commit `b67b505` ("feat: máscara progressiva de CPF/CNPJ global"): novo `public/js/taxid.js` (`busca_cnpj.taxid`:
-  `strip`, `mask`, `bind_input`) carregado em todo o Desk; `app_include_js` do `hooks.py` passa a ser a lista
-  `cep.js` + `taxid.js`. Usado pelo `integracoes_customizadas` (Processo Judicial); `__version__` não mudou.
-- `confirmar_dados_cnpj` passa a aceitar só POST (`@frappe.whitelist(methods=["POST"])`; o único chamador JS usa
-  `frappe.call`, que é POST) e troca o `frappe.db.commit()` antes do rename do Fornecedor por um savepoint, revertido se
-  o rename falhar. **Mudança de comportamento:** em caso de erro no rename, o save anterior do Fornecedor agora também é
-  revertido (antes ficava persistido pelo commit); só o rename duplicado é tratado (log e segue com o nome original), e
-  os demais erros propagam. Corrige os achados `whitelisted-side-effect-on-get` e `frappe-manual-commit` do
-  Semgrep; sem mudança de `__version__`.
+- Naming and language standardization (phase 1): identifiers in Python, JavaScript and tests renamed from Portuguese
+  to English (`lookup_cnpj`, `lookup_cep`, `confirm_cnpj_data`, `normalize_cnpj`, `validate_cnpj`, `format_cnpj`,
+  `validate_cpf`, `validate_tax_id`, ...); comments, docstrings and documentation translated to English. The old
+  Portuguese names of the functions used by `integracoes_customizadas` remain as deprecated aliases (including `buscar_cep`, `formatar_cep`, `formatar_telefone`, `sanitizar_razao_social`, `valor_caractere` and the `setup.py` helpers). DocType,
+  fieldnames, payload keys and user-facing messages are unchanged.
+- `validar_tax_id` (deprecated alias) also accepts the old `valor=` keyword.
+- Metadata: publisher StillPulse Tecnologia LTDA, proprietary license, `required_apps` as
+  `frappe/frappe@version-15` and `frappe/erpnext@version-15`; new [docs/dependencies.md](docs/dependencies.md) and
+  [ADR-004](docs/adr-004-language-and-naming-standardization.md).
 
-## v2.0.0 — Dependências fixadas · 2026-11-02
+## Unreleased · 2026-10-31
 
-- `required_apps` passa a `frappe/erpnext@version-15`.
-- README: o `bench get-app` usava `--branch develop` (inexistente); agora `main`, com ERPNext no `version-15`.
+- Commit `b67b505` ("feat: máscara progressiva de CPF/CNPJ global"): new `public/js/taxid.js` (`busca_cnpj.taxid`:
+  `strip`, `mask`, `bind_input`) loaded across the whole Desk; `app_include_js` in `hooks.py` becomes the list
+  `cep.js` + `taxid.js`. Used by `integracoes_customizadas` (Processo Judicial); `__version__` did not change.
+- `confirmar_dados_cnpj` (now `confirm_cnpj_data`) accepts POST only (`@frappe.whitelist(methods=["POST"])`; the only JS
+  caller uses `frappe.call`, which is POST) and replaces the `frappe.db.commit()` before the Supplier rename with a
+  savepoint, rolled back if the rename fails. **Behavior change:** if the rename fails, the previous Supplier save is
+  now also rolled back (before, it stayed persisted by the commit); only the duplicate rename is handled (logged, and
+  the original name is kept) and any other error propagates. Fixes the Semgrep findings
+  `whitelisted-side-effect-on-get` and `frappe-manual-commit`; `__version__` unchanged. The deprecated alias
+  `confirmar_dados_cnpj` is also POST-only and delegates to `confirm_cnpj_data`.
 
-## v1.3.6 — Fecha o ciclo do CI na main · 2026-10-28
+## v2.0.0 — Pinned dependencies · 2026-11-02
 
-- Commit `60a352d` ("chore: fecha o ciclo do CI na main"): só incrementa `__version__` para `1.3.6`. Fecha o ciclo das
-  versões `v1.3.4` e `v1.3.5`, integradas por merge (`13d3dfe`).
+- `required_apps` becomes `frappe/erpnext@version-15`.
+- README: `bench get-app` used `--branch develop` (nonexistent); it is now `main`, with ERPNext on `version-15`.
 
-## v1.3.5 — Ferramentas de checagem do Frappe · 2026-10-28
+## v1.3.6 — Closes the CI cycle on main · 2026-10-28
 
-- Commit `dc589ab` ("ci: ferramentas de checagem do Frappe (commitlint, linter, CI)"), integrado pelo PR #1
+- Commit `60a352d` ("chore: fecha o ciclo do CI na main"): only bumps `__version__` to `1.3.6`. Closes the cycle of
+  versions `v1.3.4` and `v1.3.5`, integrated by merge (`13d3dfe`).
+
+## v1.3.5 — Frappe checking tools · 2026-10-28
+
+- Commit `dc589ab` ("ci: ferramentas de checagem do Frappe (commitlint, linter, CI)"), integrated by PR #1
   (`c1edd25`).
-- Adiciona `commitlint.config.js` e o hook `commitlint` no `.pre-commit-config.yaml`; amplia
-  `.github/workflows/linter.yml` (job de commits semânticos em PR). `__version__` passa a `1.3.5`.
+- Adds `commitlint.config.js` and the `commitlint` hook in `.pre-commit-config.yaml`; extends
+  `.github/workflows/linter.yml` (semantic-commits job on PRs). `__version__` becomes `1.3.5`.
 
-## v1.3.4 — CI também na main · 2026-10-28
+## v1.3.4 — CI also on main · 2026-10-28
 
-- Commit `8af3c26`: o workflow `ci.yml` passa a rodar em push também na branch `main` (antes só `develop`) e o grupo de
-  concorrência é renomeado para `ci-busca_cnpj-…`. `__version__` passa a `1.3.4`.
+- Commit `8af3c26`: the `ci.yml` workflow now also runs on push to the `main` branch (previously only `develop`) and
+  the concurrency group is renamed to `ci-busca_cnpj-…`. `__version__` becomes `1.3.4`.
 
-## v1.3.3 — Alinha `__version__` com a tag v1.3.2 · 2026-10-28
+## v1.3.3 — Aligns `__version__` with tag v1.3.2 · 2026-10-28
 
-- Commit `b74d0db`: `__version__` sai de `1.2.2` para `1.3.3` (a mensagem diz "alinha com a v1.3.2"; o valor gravado é
-  `1.3.3`, o da própria tag).
+- Commit `b74d0db`: `__version__` goes from `1.2.2` to `1.3.3` (the message says "alinha com a v1.3.2"; the recorded
+  value is `1.3.3`, that of the tag itself).
 
-## v1.3.2 — Reescrita do README (estado inicial registrado) · 2026-10-13
+## v1.3.2 — README rewrite (recorded initial state) · 2026-10-13
 
-Raiz do histórico (`77634c3`, "docs: reescreve README"). Estado do código nesta tag, conferido nos arquivos, e não
-mudanças feitas nela:
+Root of the history (`77634c3`, "docs: reescreve README"). State of the code at this tag, checked in the files, and
+not changes made in it:
 
-- **Fornecedor:** botão *Buscar* de CNPJ com janela de confirmação (`buscar_cnpj`, `confirmar_dados_cnpj`) que atualiza
-  o fornecedor e cria Endereço, Contato (sócio, telefone, e-mail) e CNAEs; máscara e validação de CNPJ numérico e
-  alfanumérico e de CPF, no formulário e no servidor (`doc_events` → `Supplier.validate`); higienização da razão
-  social; tabela filha `CNAE Fornecedor`.
-- **Fontes:** CNPJ.ws, com contingência para BrasilAPI e Minha Receita (timeout de 15 s); resposta do CNPJ.ws convertida
-  ao formato da BrasilAPI.
-- **CEP:** busca por ViaCEP em Endereço e Colaborador (`cep.js`, `address.js`, `employee.js`); Custom Fields `cnaes`,
-  `custom_current_cep` e `custom_bairro`; ajuste de layout do Endereço.
-- **Instalação/migração:** `after_install`/`after_migrate` criam os Custom Fields e desativam Client/Server Scripts de
-  Fornecedor legados que validam CNPJ só com dígitos.
-- **Testes:** `tests/test_cnpj.py` com 9 testes de CNPJ (sem testes de API).
-- **Infraestrutura:** `.pre-commit-config.yaml`, `.eslintrc`, `.editorconfig`, workflows `ci.yml` e `linter.yml`.
+- **Supplier:** CNPJ *Buscar* button with a confirmation dialog (`buscar_cnpj`, `confirmar_dados_cnpj`) that updates
+  the supplier and creates Address, Contact (partner, phone, e-mail) and CNAEs; mask and validation of numeric and
+  alphanumeric CNPJ and of CPF, in the form and on the server (`doc_events` → `Supplier.validate`); legal-name
+  sanitization; child table `CNAE Fornecedor`.
+- **Sources:** CNPJ.ws, with fallback to BrasilAPI and Minha Receita (15 s timeout); CNPJ.ws response converted to
+  the BrasilAPI format.
+- **CEP:** ViaCEP lookup on Address and Employee (`cep.js`, `address.js`, `employee.js`); Custom Fields `cnaes`,
+  `custom_current_cep` and `custom_bairro`; Address layout adjustment.
+- **Installation/migration:** `after_install`/`after_migrate` create the Custom Fields and disable legacy Supplier
+  Client/Server Scripts that validate CNPJ with digits only.
+- **Tests:** `tests/test_cnpj.py` with 9 CNPJ tests (no API tests).
+- **Infrastructure:** `.pre-commit-config.yaml`, `.eslintrc`, `.editorconfig`, workflows `ci.yml` and `linter.yml`.
 
-## v1.3.1 (fora do histórico do HEAD) — pyproject · 2026-10-08
+## v1.3.1 (outside the HEAD history) — pyproject · 2026-10-08
 
-Entrada de faixa, descrita só pelo assunto do commit `6462d12`: "declara frappe-dependencies e documenta dependencias".
-É uma **raiz separada** (sem pai) que já contém o app inteiro, fora do histórico do HEAD. Pela diferença entre as tags
-(`git diff v1.3.1 v1.3.2`), `v1.3.2` muda só o `README.md` em relação a ela; logo a `v1.3.1` já tinha o mesmo código e
-`pyproject.toml` (inferência a partir do diff).
+Range entry, described only by the subject of commit `6462d12`: "declara frappe-dependencies e documenta
+dependencias". It is a **separate root** (no parent) that already contains the whole app, outside the HEAD history.
+By the difference between the tags (`git diff v1.3.1 v1.3.2`), `v1.3.2` changes only `README.md` relative to it;
+hence `v1.3.1` already had the same code and `pyproject.toml` (inference from the diff).

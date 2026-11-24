@@ -1,77 +1,78 @@
-# ADR-002: Qualidade e legibilidade de logs de integração externa
+# ADR-002: Quality and readability of external-integration logs
 
-## Contexto
+## Context
 
-O `integracoes_customizadas` identificou e corrigiu um problema recorrente em integrações com serviço externo: a
-integração com a API Pública do DataJud (CNJ) passou a falhar com HTTP 403 em todos os tribunais, mas o Error Log
-só registrava `"Processo X, tribunal Y: DataJudError. Dados anteriores preservados."` — sem endpoint, método,
-status HTTP, corpo da resposta ou traceback. Diagnosticar a causa raiz exigiu ler o código-fonte, não o log. Ao
-mesmo tempo, cada processo falhando virava um registro próprio a cada execução — com 56 processos falhando, eram
-56 entradas por rodada, inundando o Error Log. A correção (DocType `DataJud Sync Log`, com contexto estruturado,
-agrupamento por execução/tipo de erro e chave de API mascarada) e o princípio geral estão documentados em
+`integracoes_customizadas` identified and fixed a recurring problem in integrations with external services: the
+integration with the DataJud public API (CNJ, the Brazilian National Council of Justice) started failing with
+HTTP 403 on every court, but the Error Log only recorded `"Processo X, tribunal Y: DataJudError. Dados anteriores
+preservados."` — with no endpoint, method, HTTP status, response body or traceback. Diagnosing the root cause
+required reading the source code, not the log. At the same time, each failing case became its own record on every
+run — with 56 failing cases, that meant 56 entries per round, flooding the Error Log. The fix (the `DataJud Sync Log`
+DocType, with structured context, grouping by run/error type and a masked API key) and the general principle are
+documented in
 [`integracoes_customizadas/docs/adr-002-qualidade-e-legibilidade-de-logs.md`](https://github.com/still-pulse/integracoes_customizadas)
-e em
+and in
 [`integracoes_customizadas/docs/datajud-qualidade-de-logs.md`](https://github.com/still-pulse/integracoes_customizadas)
-(a correção concreta aplicada ao DataJud).
+(the concrete fix applied to DataJud).
 
-O `busca_cnpj` é especialmente exposto a esse mesmo tipo de problema: **todo o app é integração com serviço
-externo**. `busca_cnpj.api._consultar_api` consulta três bases públicas da Receita Federal em contingência
-(CNPJ.ws, BrasilAPI, Minha Receita) e `busca_cnpj.api.buscar_cep` consulta o ViaCEP — ambos via `requests.get`
-direto, sem fila, sem cache e sem DocType de log próprio (ver
-[Privacidade e limites das consultas](../README.md#privacidade-e-limites-das-consultas) no README).
+`busca_cnpj` is especially exposed to this same kind of problem: **the whole app is an integration with external
+services**. `busca_cnpj.api._query_api` queries three public Federal Revenue Service (Receita Federal) data sources
+with fallback (CNPJ.ws, BrasilAPI, Minha Receita) and `busca_cnpj.api.lookup_cep` queries ViaCEP — both through a
+direct `requests.get`, with no queue, no cache and no log DocType of their own (see
+[Privacy and query limits](../README.md#privacy-and-query-limits) in the README).
 
-Hoje, ao inspecionar o código real (`busca_cnpj/api.py`):
+Today, inspecting the actual code (`busca_cnpj/api.py`):
 
-- Em `_consultar_api`, uma falha de conexão (`requests.exceptions.RequestException`) em qualquer das três fontes é
-  silenciosamente ignorada (`continue`) — **nenhuma chamada a `frappe.log_error` registra qual fonte falhou, com
-  que URL, status HTTP ou exceção**. O usuário recebe só `frappe.throw` com uma mensagem genérica
-  ("Não foi possível conectar", "Erro ao consultar CNPJ (código N)"); se as três fontes mudarem de contrato ou
-  começarem a responder 403/429, não há nenhum registro no Error Log para diagnosticar à distância — exatamente o
-  sintoma que motivou o ADR do DataJud, só que aqui ainda pior: nem o log pobre existe, porque não há log nenhum.
-- Em `buscar_cep`, o mesmo padrão: falha de conexão ou status HTTP diferente de 200 vira só `frappe.throw`, sem
-  `frappe.log_error`.
-- Os únicos `frappe.log_error` do app ficam em `confirmar_dados_cnpj` (rename de Supplier duplicado, falha ao criar
-  Endereço, falha ao criar Contato) e **já seguem parcialmente o padrão**: título descritivo, nome do Supplier e,
-  nos dois últimos, `frappe.get_traceback()` completo. Faltam, porém, o contexto da chamada HTTP que originou a
-  falha (quando aplicável) e qualquer classificação de erro.
-- Não há segredo em jogo nestas três APIs (CNPJ.ws, BrasilAPI, Minha Receita e ViaCEP são públicas, sem chave), ao
-  contrário do DataJud — mas o princípio de não gravar segredo em claro vale para qualquer integração futura deste
-  app que passe a exigir autenticação.
+- In `_query_api`, a connection failure (`requests.exceptions.RequestException`) on any of the three sources is
+  silently ignored (`continue`) — **no call to `frappe.log_error` records which source failed, with which URL, HTTP
+  status or exception**. The user only gets a `frappe.throw` with a generic message ("Não foi possível conectar",
+  "Erro ao consultar CNPJ (código N)"); if all three sources change contract or start answering 403/429, there is no
+  Error Log record to diagnose remotely — exactly the symptom that motivated the DataJud ADR, only worse here: not
+  even the poor log exists, because there is no log at all.
+- In `lookup_cep`, the same pattern: a connection failure or an HTTP status other than 200 becomes only a
+  `frappe.throw`, with no `frappe.log_error`.
+- The only `frappe.log_error` calls in the app are in `confirm_cnpj_data` (duplicate Supplier rename, failure to
+  create Address, failure to create Contact) and **already partially follow the pattern**: descriptive title,
+  Supplier name and, in the last two, the full `frappe.get_traceback()`. They still lack, however, the context of the
+  HTTP call that originated the failure (when applicable) and any error classification.
+- No secret is involved in these four APIs (CNPJ.ws, BrasilAPI, Minha Receita and ViaCEP are public, with no key),
+  unlike DataJud — but the principle of never writing a secret in clear text applies to any future integration of
+  this app that starts requiring authentication.
 
-## Decisão
+## Decision
 
-O princípio geral do `integracoes_customizadas` (ADR-002 daquele app) se aplica ao `busca_cnpj`: toda integração
-com um serviço externo (API de terceiro, webhook, fila) deste app deve logar contexto suficiente para
-diagnosticar sem reler o código-fonte, e sem inundar o Error Log:
+The general principle of `integracoes_customizadas` (ADR-002 of that app) applies to `busca_cnpj`: every integration
+with an external service (third-party API, webhook, queue) in this app must log enough context to diagnose without
+rereading the source code, and without flooding the Error Log:
 
-1. **Contexto estruturado, não só a mensagem da exceção ou o `frappe.throw` ao usuário**: endpoint/URL consultada,
-   método HTTP, status HTTP, os primeiros ~1.000 caracteres do corpo da resposta, o tipo da exceção e o
-   traceback. Um `frappe.throw` com mensagem amigável para o usuário não substitui o `frappe.log_error` com esse
-   contexto técnico — são propósitos diferentes.
-2. **Nunca gravar segredo em claro**: nenhuma das integrações atuais (CNPJ.ws, BrasilAPI, Minha Receita, ViaCEP)
-   usa chave de API hoje, então esta regra ainda não tem efeito prático aqui — mas vale desde já para qualquer
-   integração futura deste app que passe a exigir chave, token ou header de autenticação: nunca em claro no log,
-   só um prefixo mascarado quando for útil confirmar qual credencial foi usada.
-3. **Classificar o erro**, não só repetir a exceção crua: ao menos falha de conexão/timeout, status 4xx do
-   cliente (CNPJ/CEP inválido ou não encontrado) e status 5xx/indisponibilidade do provedor são categorias
-   distintas o bastante para decidir a ação (nada a fazer vs. provedor fora do ar vs. dado do usuário errado).
-4. **Agrupar falhas repetidas da mesma execução por tipo de erro**, com contagem, em vez de um registro por item
-   processado — relevante sobretudo para quem chama `buscar_cnpj` em lote (ex.: a importação Bionexo do
-   `integracoes_customizadas`, citada em [Uso por outros apps](../README.md#uso-por-outros-apps)): uma falha
-   sistêmica nas três fontes de CNPJ deve gerar poucos registros de log claros, não um por CNPJ da lista.
+1. **Structured context, not only the exception message or the `frappe.throw` shown to the user**: the endpoint/URL
+   queried, HTTP method, HTTP status, the first ~1,000 characters of the response body, the exception type and the
+   traceback. A `frappe.throw` with a friendly user message does not replace a `frappe.log_error` with this technical
+   context — they serve different purposes.
+2. **Never write a secret in clear text**: none of the current integrations (CNPJ.ws, BrasilAPI, Minha Receita,
+   ViaCEP) uses an API key today, so this rule has no practical effect here yet — but it applies from now on to any
+   future integration of this app that starts requiring a key, token or authentication header: never in clear text in
+   the log, only a masked prefix when it is useful to confirm which credential was used.
+3. **Classify the error**, not just repeat the raw exception: at least connection failure/timeout, client 4xx status
+   (invalid or not-found CNPJ/CEP) and provider 5xx status/unavailability are categories distinct enough to decide
+   the action (nothing to do vs. provider down vs. wrong user data).
+4. **Group repeated failures of the same run by error type**, with a count, instead of one record per processed
+   item — relevant above all for whoever calls `lookup_cnpj` in bulk (e.g. the Bionexo import of
+   `integracoes_customizadas`, cited in [Use by other apps](../README.md#use-by-other-apps)): a systemic failure on
+   the three CNPJ sources should generate a few clear log records, not one per CNPJ in the list.
 
-Isso não exige recriar o design do `DataJud Sync Log` aqui: o volume de chamadas deste app é por clique do usuário
-(não por execução agendada com dezenas de itens), então o Error Log do Frappe, usado hoje, continua sendo
-suficiente — desde que cada falha de `_consultar_api` e de `buscar_cep` passe a registrar o item 1 acima, o que
-hoje **não acontece** (achado, não corrigido neste documento — fora do escopo desta mudança, que é só
-documentação). Um DocType próprio de log só se justificaria se este app passasse a rodar em lote com volume de
-falha relevante por execução (ver item 4).
+This does not require recreating the `DataJud Sync Log` design here: the call volume of this app is per user click
+(not per scheduled run with dozens of items), so the Frappe Error Log, used today, remains sufficient — as long as
+each failure in `_query_api` and `lookup_cep` starts recording item 1 above, which today **does not happen** (a
+finding, not fixed in this document — out of scope for this change, which is documentation only). A dedicated log
+DocType would only be justified if this app started running in bulk with a relevant failure volume per run (see
+item 4).
 
-## Consequências
+## Consequences
 
-- Este documento não altera nenhum código: `_consultar_api` e `buscar_cep` continuam sem `frappe.log_error` nas
-  falhas de conexão/HTTP até que outra mudança, com escopo próprio, implemente o item 1 acima.
-- Revisão de PR: uma integração externa nova ou alterada neste app que só grava `frappe.log_error(str(exc))` (ou
-  nem isso, como hoje em `_consultar_api`/`buscar_cep`) sem status HTTP/corpo/classificação não está completa.
-- Ao tocar em `_consultar_api`, `buscar_cep` ou qualquer integração externa nova deste app por outro motivo,
-  aproveitar para alinhar o log dela a este padrão.
+- This document does not change any code: `_query_api` and `lookup_cep` remain without `frappe.log_error` on
+  connection/HTTP failures until another change, with its own scope, implements item 1 above.
+- PR review: a new or changed external integration in this app that only writes `frappe.log_error(str(exc))` (or not
+  even that, as today in `_query_api`/`lookup_cep`) without HTTP status/body/classification is not complete.
+- When touching `_query_api`, `lookup_cep` or any new external integration of this app for another reason, take the
+  opportunity to align its log with this pattern.

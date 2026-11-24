@@ -1,68 +1,81 @@
-# ADR-003: Padronização de lint e CI
+# ADR-003: Lint and CI standardization
 
 ## Status
 
-Aceita (2026-11-21).
+Accepted (2026-11-21).
 
-## Contexto
+## Context
 
-Os 10 apps Frappe do ecossistema estão sendo preparados para unificação e para a migração v15 -> v16/v17. Os apps
-divergiam em lint e CI (versão do Python, versão e regras do ruff, ignores, excludes do pre-commit, hooks de JS),
-o que dificulta revisar e mover código entre eles. Esta ADR registra a configuração comum adotada e as decisões
-tomadas ao aplicá-la no `busca_cnpj`.
+The 10 Frappe apps of the ecosystem are being prepared for unification and for the v15 -> v16/v17 migration. The
+apps diverged in lint and CI (Python version, ruff version and rules, ignores, pre-commit excludes, JS hooks), which
+makes it harder to review and move code between them. This ADR records the common configuration adopted and the
+decisions made when applying it to `busca_cnpj`.
 
-## Decisão
+## Decision
 
-1. Versão do Python: o mínimo atual **3.11 é mantido** (`target-version = "py311"`, `requires-python = ">=3.11"`,
-   `linter.yml` em 3.11 até a decisão 13) por restrição de produção. Produção e homologação foram confirmadas em **Python 3.12**, e o
-   `ci.yml` passou a rodar os testes em 3.12 para refletir a produção; o 3.14 usado antes é incompatível com o Frappe
-   v15 (freezegun quebra na coleta: `AttributeError: module 'uuid' has no attribute '_load_system_functions'`). O alvo
-   de migração ao Frappe v16 é `>=3.13` (`target-version = "py313"`, `requires-python = ">=3.13"`, `linter.yml` e
-   `ci.yml` coerentes), a executar na própria migração.
-2. ruff fixado em v0.16.10 via `ruff-pre-commit`, regras `F,E,W,I,UP,B,RUF` e lista de `ignore` idêntica à do CLM.
-3. pyupgrade coberto pela regra `UP` do ruff, sem hook separado.
-4. F401 **não** é ignorado: imports mortos são removidos; reexportações/efeito colateral são mantidos com
-   `# noqa: F401  # <motivo>`. Strings visíveis ao usuário com caractere unicode ambíguo recebem
-   `# noqa: RUF001` em vez de alterar o texto.
-5. prettier 2.7.1 e eslint 8.44.0 mantidos (atualização adiada, para não misturar com a padronização; revisar na
-   preparação para v16/v17).
-6. Os `exclude` do pre-commit são sempre caminhos do próprio repositório; entradas mortas foram removidas, sem
-   ampliar o escopo ignorado.
-7. Globais de ESLint são declaradas no `.eslintrc` com escopo mínimo. Neste repositório: apenas `busca_cnpj`
-   (`"writable"`), namespace do próprio app criado por `frappe.provide`. Nenhum `overrides` necessário.
-8. Arquivos JS com Jinja são excluídos de prettier/eslint por caminho exato. Neste repositório: nenhum.
-9. JS formatado pelo prettier em commit exclusivo de estilo. Neste repositório: 3 arquivos
-   (`cep.js`, `supplier.js`, `taxid.js`).
-10. O pip-audit roda só no CI e audita apenas o `pyproject` (as dependências erpnext/hrms ficam comentadas), então
-    cobre pouco: pendência.
-11. commitlint mantido e `pre-commit install` documentado no `AGENTS.md`.
-12. Sem tag nem mudança de `__version__` nesta padronização.
-13. Python no CI: `linter.yml` e `ci.yml` (quando existe) rodam em **3.12**, igual à produção/homologação; o piso 3.11 continua em `requires-python` e `target-version`. Nunca 3.14 (o Frappe v15 não o suporta).
-14. Actions alinhadas em todos os workflows: `actions/checkout@v7`, `actions/setup-python@v7`, `actions/setup-node@v7`, `actions/cache@v6`. O `pre-commit/action` foi substituído por três passos (`pip install pre-commit`, `actions/cache@v6` de `~/.cache/pre-commit`, `pre-commit run --all-files`). Os workflows de CI/testes ganharam `workflow_dispatch` para validar sem PR, e o job `linter` roda também fora de PR.
-15. pip-audit informativo: o job obrigatório `deps-vulnerable-check` permanece e audita este app. Foi adicionado o job separado `deps-vulnerable-check-stack` com `continue-on-error: true`, que clona o Frappe e o ERPNext `version-15` do GitHub e roda `pip-audit` sobre essas cópias (os requisitos declarados por elas). Não audita este app nem as versões efetivamente instaladas no ambiente; achados aparecem no log, mas não deixam o gate vermelho.
-16. Dependências explícitas: imports reais auditados. `requests` vem do Frappe e `erpnext` está em `required_apps` (hooks) e em `[tool.bench.frappe-dependencies]`; o código não importa nenhum outro pacote externo. Nenhuma declaração faltava. Dependências fracas com guarda ficam documentadas, nunca em `required_apps`.
-17. Semgrep em varredura completa: o passo roda `semgrep scan --error --metrics=off` com as regras do `frappe/semgrep-rules` e `r/python.lang.correctness` sobre todo o repositório (PR, push na `main` e `workflow_dispatch`), igual nos demais apps. Não usa `semgrep ci`, que em PR analisa só o diff; qualquer achado reprova o job.
+1. Python version: the current minimum **3.11 is kept** (`target-version = "py311"`, `requires-python = ">=3.11"`,
+   `linter.yml` on 3.11 until decision 13) because of a production constraint. Production and staging were confirmed on **Python 3.12**,
+   and `ci.yml` now runs the tests on 3.12 to mirror production; the 3.14 used before is incompatible with Frappe v15
+   (freezegun breaks at collection: `AttributeError: module 'uuid' has no attribute '_load_system_functions'`). The
+   migration target for Frappe v16 is `>=3.13` (`target-version = "py313"`, `requires-python = ">=3.13"`,
+   `linter.yml` and `ci.yml` consistent), to be done in the migration itself.
+2. ruff pinned to v0.16.10 through `ruff-pre-commit`, rules `F,E,W,I,UP,B,RUF` and an `ignore` list identical to
+   CLM's.
+3. pyupgrade covered by ruff's `UP` rule, with no separate hook.
+4. F401 is **not** ignored: dead imports are removed; re-exports/side-effect imports are kept with
+   `# noqa: F401  # <reason>`. User-visible strings with an ambiguous unicode character get `# noqa: RUF001` instead
+   of changing the text.
+5. prettier 2.7.1 and eslint 8.44.0 kept (upgrade postponed, to avoid mixing it with the standardization; review when
+   preparing for v16/v17).
+6. The pre-commit `exclude` entries are always paths of the repository itself; dead entries were removed, without
+   widening the ignored scope.
+7. ESLint globals are declared in `.eslintrc` with minimal scope. In this repository: only `busca_cnpj`
+   (`"writable"`), the app's own namespace created by `frappe.provide`. No `overrides` needed.
+8. JS files with Jinja are excluded from prettier/eslint by exact path. In this repository: none.
+9. JS formatted by prettier in a style-only commit. In this repository: 3 files (`cep.js`, `supplier.js`,
+   `taxid.js`).
+10. pip-audit runs only in CI and audits only the `pyproject` (the erpnext/hrms dependencies are commented out), so
+    it covers little: pending.
+11. commitlint kept and `pre-commit install` documented in `AGENTS.md`.
+12. No tag and no `__version__` change in this standardization.
+13. Python in CI: `linter.yml` and `ci.yml` (where present) run on **3.12**, the same as production/staging; the 3.11
+    floor remains in `requires-python` and `target-version`. Never 3.14 (Frappe v15 does not support it).
+14. Actions aligned across all workflows: `actions/checkout@v7`, `actions/setup-python@v7`, `actions/setup-node@v7`,
+    `actions/cache@v6`. `pre-commit/action` was replaced by three steps (`pip install pre-commit`, `actions/cache@v6`
+    of `~/.cache/pre-commit`, `pre-commit run --all-files`). The CI/test workflows gained `workflow_dispatch` to
+    validate without a PR, and the `linter` job also runs outside PRs.
+15. Informational pip-audit: the mandatory `deps-vulnerable-check` job remains and audits this app. A separate
+    `deps-vulnerable-check-stack` job with `continue-on-error: true` was added; it clones Frappe and ERPNext
+    `version-15` from GitHub and runs `pip-audit` on those copies (the requirements they declare). It does not audit
+    this app nor the versions actually installed in the environment; findings show in the log but do not turn the gate
+    red.
+16. Explicit dependencies: real imports audited. `requests` comes from Frappe and `erpnext` is in `required_apps`
+    (hooks) and in `[tool.bench.frappe-dependencies]`; the code imports no other external package. No declaration was
+    missing. Guarded weak dependencies are documented, never in `required_apps`.
+17. Semgrep full scan: the step runs `semgrep scan --error --metrics=off` with the `frappe/semgrep-rules` and
+    `r/python.lang.correctness` rules over the whole repository (PR, push to `main` and `workflow_dispatch`), the same
+    as in the other apps. It does not use `semgrep ci`, which analyzes only the diff on PRs; any finding fails the job.
 
-## Consequências
+## Consequences
 
-- Lint e formatação idênticos entre os apps, facilitando a unificação e a revisão cruzada.
-- Imports mortos aparecem como erro (F401) e precisam de remoção ou `noqa` justificado.
-- Versões de prettier/eslint ficam defasadas até a preparação para o v16/v17.
-- O ESLint passa a validar de fato o JS; o namespace `busca_cnpj` é aceito como global, mas erros de digitação
-  nele deixam de ser detectados.
+- Identical lint and formatting across the apps, easing unification and cross-review.
+- Dead imports show up as errors (F401) and need removal or a justified `noqa`.
+- prettier/eslint versions stay outdated until the preparation for v16/v17.
+- ESLint now actually validates the JS; the `busca_cnpj` namespace is accepted as a global, but typos in it are no
+  longer detected.
 
-## Estado deste repositório
+## State of this repository
 
-| Item | Estado |
+| Item | State |
 | --- | --- |
-| F401 | 1 import removido (`import frappe` em `cnae_fornecedor.py`, commit `fix: corrigir erros do ruff check`); 0 mantidos com `noqa`; `F401` removido do ignore no `pyproject.toml` |
-| Excludes alterados | Removidas entradas mortas de prettier e eslint (`public/dist`, `templates/includes`, `public/js/lib`, `cypress`); mantidos `node_modules` e `boilerplate` |
-| ESLint | `no-undef` de `busca_cnpj` (25 ocorrências em 5 arquivos) resolvido com a global; nenhum bug real encontrado |
-| Prettier | 3 arquivos JS reformatados (apenas estilo) |
-| pre-commit (`SKIP=commitlint pre-commit run --all-files`) | Todos os hooks passam |
+| F401 | 1 import removed (`import frappe` in `cnae_fornecedor.py`, commit `fix: corrigir erros do ruff check`); 0 kept with `noqa`; `F401` removed from the ignore list in `pyproject.toml` |
+| Excludes changed | Dead prettier and eslint entries removed (`public/dist`, `templates/includes`, `public/js/lib`, `cypress`); `node_modules` and `boilerplate` kept |
+| ESLint | `no-undef` for `busca_cnpj` (25 occurrences in 5 files) resolved with the global; no real bug found |
+| Prettier | 3 JS files reformatted (style only) |
+| pre-commit (`SKIP=commitlint pre-commit run --all-files`) | All hooks pass |
 
-## Pendências
+## Pending
 
-- Migrar para `>=3.13` junto com o v16; revisar também as versões de prettier/eslint na preparação para o v16/v17.
-- Ampliar o pip-audit para cobrir as dependências erpnext/hrms (hoje comentadas). Parcialmente atendida pelo job informativo `deps-vulnerable-check-stack`; falta tornar o gate obrigatório após triar os achados.
-- Avaliar migrar o `.eslintrc` para a configuração flat quando o eslint for atualizado.
+- Migrate to `>=3.13` together with v16; also review the prettier/eslint versions when preparing for v16/v17.
+- Extend pip-audit to cover the erpnext/hrms dependencies (currently commented out). Partially met by the informational `deps-vulnerable-check-stack` job; the gate still has to be made mandatory after triaging the findings.
+- Evaluate migrating `.eslintrc` to the flat configuration when eslint is upgraded.
