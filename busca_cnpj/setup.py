@@ -125,3 +125,8 @@ def _disable_server_scripts():
 			continue
 		frappe.db.set_value("Server Script", row.name, "disabled", 1, update_modified=False)
 		frappe.logger("busca_cnpj").info("Server Script legado desativado: %s", row.name)
+
+
+# Deprecated aliases kept for the old public names; remove after external callers migrate.
+ajustar_layout_address = adjust_address_layout
+desativar_scripts_cnpj_legado = disable_legacy_cnpj_scripts

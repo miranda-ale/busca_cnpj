@@ -82,8 +82,8 @@ It is also used by another app on the bench: `integracoes_customizadas` depends 
 | CPF/CNPJ mask in the form | `processo_judicial.js` | `busca_cnpj.taxid.bind_input` (guarded by `window.busca_cnpj?.taxid`) |
 
 Those consumers still use the **deprecated Portuguese aliases** of the functions, which this app keeps until they
-migrate to the English names (`lookup_cnpj`, `confirm_cnpj_data`, `format_cnpj`, `normalize_cnpj`, `validate_tax_id`,
-`validate_cpf`); see [docs/dependencies.md](docs/dependencies.md). Changes to the signatures and return values of
+migrate to the English names (`lookup_cnpj`, `lookup_cep`, `confirm_cnpj_data`, `format_cnpj`, `normalize_cnpj`,
+`validate_tax_id`, `validate_cpf`); see [docs/dependencies.md](docs/dependencies.md). Changes to the signatures and return values of
 `busca_cnpj.cnpj` and `busca_cnpj.api` affect that app. The `busca_cnpj.taxid` helper is loaded globally by this app
 (`taxid.js`), but today only `integracoes_customizadas` uses it; no form of `busca_cnpj` itself calls it.
 

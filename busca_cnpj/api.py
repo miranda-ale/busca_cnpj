@@ -430,6 +430,12 @@ def _create_contact(supplier_name: str, data: dict) -> str | None:
 # `buscar_cnpj` and `confirmar_dados_cnpj`; the JS of other apps may call them by dotted path).
 # Remove once the consumers migrate to `lookup_cnpj` and `confirm_cnpj_data`.
 @frappe.whitelist()
+def buscar_cep(cep: str) -> dict:
+	"""Deprecated alias of `lookup_cep`; remove after external callers migrate."""
+	return lookup_cep(cep)
+
+
+@frappe.whitelist()
 def buscar_cnpj(cnpj: str) -> dict:
 	return lookup_cnpj(cnpj)
 
@@ -437,3 +443,9 @@ def buscar_cnpj(cnpj: str) -> dict:
 @frappe.whitelist()
 def confirmar_dados_cnpj(supplier_name: str, dados: str) -> dict:
 	return confirm_cnpj_data(supplier_name, dados)
+
+
+# Deprecated aliases of the formatting helpers; remove after external callers migrate.
+formatar_cep = format_cep
+formatar_telefone = format_phone
+sanitizar_razao_social = sanitize_company_name

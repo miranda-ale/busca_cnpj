@@ -89,3 +89,4 @@ validar_cnpj = validate_cnpj
 formatar_cnpj = format_cnpj
 validar_cpf = validate_cpf
 validar_tax_id = validate_tax_id
+valor_caractere = character_value

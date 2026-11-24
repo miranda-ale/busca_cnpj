@@ -37,6 +37,13 @@ that the consumers above keep working until they migrate:
 | `busca_cnpj.cnpj.formatar_cnpj` | `format_cnpj` |
 | `busca_cnpj.cnpj.validar_cpf` | `validate_cpf` |
 | `busca_cnpj.cnpj.validar_tax_id` | `validate_tax_id` |
+| `busca_cnpj.cnpj.valor_caractere` | `character_value` |
+| `busca_cnpj.api.buscar_cep` (whitelisted) | `busca_cnpj.api.lookup_cep` |
+| `busca_cnpj.api.formatar_cep` | `format_cep` |
+| `busca_cnpj.api.formatar_telefone` | `format_phone` |
+| `busca_cnpj.api.sanitizar_razao_social` | `sanitize_company_name` |
+| `busca_cnpj.setup.ajustar_layout_address` | `adjust_address_layout` |
+| `busca_cnpj.setup.desativar_scripts_cnpj_legado` | `disable_legacy_cnpj_scripts` |
 
 `integracoes_customizadas` has already migrated to the English names on its own branch; remove the aliases in a later
 release, after that branch is merged and verified with a grep (see ADR-004). Remove the aliases only after `integracoes_customizadas` imports the English names. The keys of the dictionaries

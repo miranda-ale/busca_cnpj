@@ -27,7 +27,7 @@ that of the commit marked by the tag. The "Unreleased" entries come from commits
 - Naming and language standardization (phase 1): identifiers in Python, JavaScript and tests renamed from Portuguese
   to English (`lookup_cnpj`, `lookup_cep`, `confirm_cnpj_data`, `normalize_cnpj`, `validate_cnpj`, `format_cnpj`,
   `validate_cpf`, `validate_tax_id`, ...); comments, docstrings and documentation translated to English. The old
-  Portuguese names of the functions used by `integracoes_customizadas` remain as deprecated aliases. DocType,
+  Portuguese names of the functions used by `integracoes_customizadas` remain as deprecated aliases (including `buscar_cep`, `formatar_cep`, `formatar_telefone`, `sanitizar_razao_social`, `valor_caractere` and the `setup.py` helpers). DocType,
   fieldnames, payload keys and user-facing messages are unchanged.
 - Metadata: publisher StillPulse Tecnologia LTDA, proprietary license, `required_apps` as
   `frappe/frappe@version-15` and `frappe/erpnext@version-15`; new [docs/dependencies.md](docs/dependencies.md) and

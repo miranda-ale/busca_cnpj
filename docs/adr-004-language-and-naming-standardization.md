@@ -61,10 +61,15 @@ Private helpers (`_consultar_api`, `_normalizar_cnpjws`, `_criar_endereco`, `_cr
 
 Kept so that unmigrated consumers keep working:
 
-- `busca_cnpj.api.buscar_cnpj` and `busca_cnpj.api.confirmar_dados_cnpj` (both still `@frappe.whitelist()`);
-- `busca_cnpj.cnpj.normalizar_cnpj`, `validar_cnpj`, `formatar_cnpj`, `validar_cpf`, `validar_tax_id`.
+- `busca_cnpj.api.buscar_cnpj`, `busca_cnpj.api.buscar_cep` and `busca_cnpj.api.confirmar_dados_cnpj` (all still
+  `@frappe.whitelist()`, delegating to the English functions);
+- `busca_cnpj.api.formatar_cep`, `formatar_telefone`, `sanitizar_razao_social`;
+- `busca_cnpj.cnpj.normalizar_cnpj`, `validar_cnpj`, `formatar_cnpj`, `validar_cpf`, `validar_tax_id`,
+  `valor_caractere`;
+- `busca_cnpj.setup.ajustar_layout_address`, `desativar_scripts_cnpj_legado`.
 
-`buscar_cep` has no alias (no external consumer was found).
+Every public name that existed on `main` before the rename keeps an alias; `tests/test_cnpj.py` fails if any of them
+goes missing.
 
 `integracoes_customizadas` (the only known consumer) already migrated to the English names on its own branch, so the
 aliases can be **removed in a later release, after that branch is merged**. Before removing them, verify with a grep
