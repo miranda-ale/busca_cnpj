@@ -38,6 +38,7 @@ that the consumers above keep working until they migrate:
 | `busca_cnpj.cnpj.validar_cpf` | `validate_cpf` |
 | `busca_cnpj.cnpj.validar_tax_id` | `validate_tax_id` |
 
-Remove the aliases only after `integracoes_customizadas` imports the English names. The keys of the dictionaries
+`integracoes_customizadas` has already migrated to the English names on its own branch; remove the aliases in a later
+release, after that branch is merged and verified with a grep (see ADR-004). Remove the aliases only after `integracoes_customizadas` imports the English names. The keys of the dictionaries
 returned by `lookup_cnpj` (`razao_social`, `cnpj_formatado`, `socios`, `endereco`, ...) are a payload contract shared
 with that app and are unchanged.

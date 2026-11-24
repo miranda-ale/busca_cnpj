@@ -30,7 +30,8 @@ that of the commit marked by the tag. The "Unreleased" entries come from commits
   Portuguese names of the functions used by `integracoes_customizadas` remain as deprecated aliases. DocType,
   fieldnames, payload keys and user-facing messages are unchanged.
 - Metadata: publisher StillPulse Tecnologia LTDA, proprietary license, `required_apps` as
-  `frappe/frappe@version-15` and `frappe/erpnext@version-15`; new [docs/dependencies.md](docs/dependencies.md).
+  `frappe/frappe@version-15` and `frappe/erpnext@version-15`; new [docs/dependencies.md](docs/dependencies.md) and
+  [ADR-004](docs/adr-004-language-and-naming-standardization.md).
 
 ## Unreleased · 2026-10-31
 

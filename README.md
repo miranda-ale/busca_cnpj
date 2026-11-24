@@ -188,6 +188,7 @@ Lint decisions: [docs/adr-003-padronizacao-de-lint-e-ci.md](docs/adr-003-padroni
 - [docs/adr-002-qualidade-e-legibilidade-de-logs.md](docs/adr-002-qualidade-e-legibilidade-de-logs.md): quality of
   external-integration logs.
 - [docs/adr-003-padronizacao-de-lint-e-ci.md](docs/adr-003-padronizacao-de-lint-e-ci.md): lint and CI standardization.
+- [docs/adr-004-language-and-naming-standardization.md](docs/adr-004-language-and-naming-standardization.md): language and naming standardization (phase 1), deprecated aliases and phase 2 items.
 
 ## License
 
