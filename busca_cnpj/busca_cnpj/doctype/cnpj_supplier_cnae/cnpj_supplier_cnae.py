@@ -1,5 +1,5 @@
 from frappe.model.document import Document
 
 
-class CNAEFornecedor(Document):
+class CNPJSupplierCNAE(Document):
 	pass
