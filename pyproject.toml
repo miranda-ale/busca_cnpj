@@ -1,12 +1,11 @@
 [project]
 name = "busca_cnpj"
 authors = [
-    { name = "StillPulse Tecnologia LTDA" }
+    { name = "Alessandro Miranda", email = "alessandro.siqueira@outlook.com"}
 ]
-description = "Brazilian CNPJ and CEP lookup integrated with ERPNext Supplier, Address and Employee"
+description = "Busca de CNPJs Brasileiros integrados ao DocType de Fornecedores (Suppliers)"
 requires-python = ">=3.11"
 readme = "README.md"
-license = { text = "Proprietary" }
 dynamic = ["version"]
 dependencies = [
     # "frappe~=15.0.0" # Installed and managed by bench.

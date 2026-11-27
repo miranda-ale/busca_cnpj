@@ -1,14 +1,14 @@
 app_name = "busca_cnpj"
 app_title = "Busca CNPJ"
-app_publisher = "StillPulse Tecnologia LTDA"
-app_description = "Brazilian CNPJ and CEP lookup integrated with ERPNext Supplier, Address and Employee"
+app_publisher = "Alessandro Miranda"
+app_description = "Busca de CNPJs Brasileiros integrados ao DocType de Fornecedores (Suppliers)"
 app_email = "alessandro.siqueira@outlook.com"
-app_license = "Proprietary"
+app_license = "mit"
 
 # Apps
 # ------------------
 
-required_apps = ["frappe/frappe@version-15", "frappe/erpnext@version-15"]
+required_apps = ["frappe/erpnext@version-15"]
 
 # Each item in the list will be shown as an app in the apps page
 # add_to_apps_screen = [

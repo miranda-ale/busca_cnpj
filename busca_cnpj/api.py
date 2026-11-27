@@ -6,74 +6,73 @@ import frappe
 import requests
 from frappe import _
 
-from busca_cnpj.cnpj import format_cnpj, normalize_cnpj, validate_cnpj
+from busca_cnpj.cnpj import formatar_cnpj, normalizar_cnpj, validar_cnpj
 
 BRASILAPI_BASE_URL = "https://brasilapi.com.br/api/cnpj/v1"
 MINHA_RECEITA_BASE_URL = "https://minhareceita.org"
 CNPJWS_BASE_URL = "https://publica.cnpj.ws/cnpj"
 VIACEP_BASE_URL = "https://viacep.com.br/ws"
-SAVEPOINT_RENAME_SUPPLIER = "busca_cnpj_renomear_supplier"
 
 
-def format_cep(cep: str) -> str:
+def formatar_cep(cep: str) -> str:
 	digits = re.sub(r"\D", "", str(cep))
 	if len(digits) != 8:
 		return cep
 	return f"{digits[:5]}-{digits[5:]}"
 
 
-def format_phone(phone: str) -> str:
-	digits = re.sub(r"\D", "", str(phone))
+def formatar_telefone(tel: str) -> str:
+	digits = re.sub(r"\D", "", str(tel))
 	if not digits:
 		return ""
 	if len(digits) == 11:
 		return f"({digits[:2]}) {digits[2:7]}-{digits[7:]}"
 	if len(digits) == 10:
 		return f"({digits[:2]}) {digits[2:6]}-{digits[6:]}"
-	return phone
+	return tel
 
 
-def sanitize_company_name(name: str) -> str:
-	if not name:
+def sanitizar_razao_social(nome: str) -> str:
+	if not nome:
 		return ""
-	nfkd = unicodedata.normalize("NFKD", name)
+	nfkd = unicodedata.normalize("NFKD", nome)
 	ascii_only = "".join(c for c in nfkd if not unicodedata.combining(c))
 	upper = ascii_only.upper()
 	cleaned = re.sub(r"[^A-Z0-9\s&\-./]", "", upper)
 	return re.sub(r"\s{2,}", " ", cleaned).strip()
 
 
-def _build_address_line1(data: dict) -> str:
-	street_type = (data.get("descricao_tipo_de_logradouro") or "").strip()
-	street = (data.get("logradouro") or "").strip()
-	if street_type and street:
-		return f"{street_type} {street}"
-	return street or street_type or ""
+def _montar_address_line1(dados: dict) -> str:
+	tipo = (dados.get("descricao_tipo_de_logradouro") or "").strip()
+	logradouro = (dados.get("logradouro") or "").strip()
+	if tipo and logradouro:
+		return f"{tipo} {logradouro}"
+	return logradouro or tipo or ""
 
 
-def _build_address_line2(data: dict) -> str:
+def _montar_address_line2(dados: dict) -> str:
 	parts = []
-	number = (data.get("numero") or "").strip()
-	if number:
-		parts.append(number)
-	complement = (data.get("complemento") or "").strip()
-	if complement:
-		parts.append(complement)
+	numero = (dados.get("numero") or "").strip()
+	if numero:
+		parts.append(numero)
+	complemento = (dados.get("complemento") or "").strip()
+	if complemento:
+		parts.append(complemento)
 	return ", ".join(parts)
 
 
-def _extract_cnaes(data: dict) -> list[dict]:
+def _extrair_cnaes(dados: dict) -> list[dict]:
 	cnaes = []
-	primary_cnae = data.get("cnae_fiscal")
-	if primary_cnae:
+	cnae_principal = dados.get("cnae_fiscal")
+	if cnae_principal:
 		cnaes.append(
 			{
-				"cnae_code": str(primary_cnae),
-				"description": data.get("cnae_fiscal_descricao", ""),
+				"cnae_code": str(cnae_principal),
+				"description": dados.get("cnae_fiscal_descricao", ""),
 				"is_primary": 1,
 			}
 		)
-	for c in data.get("cnaes_secundarios") or []:
+	for c in dados.get("cnaes_secundarios") or []:
 		cnaes.append(
 			{
 				"cnae_code": str(c.get("codigo", "")),
@@ -84,23 +83,23 @@ def _extract_cnaes(data: dict) -> list[dict]:
 	return cnaes
 
 
-def _normalize_cnpjws(d: dict) -> dict:
-	"""Convert a CNPJ.ws response to the BrasilAPI format used by lookup_cnpj."""
-	establishment = d.get("estabelecimento") or {}
-	primary = establishment.get("atividade_principal") or {}
-	ddd1, tel1 = establishment.get("ddd1") or "", establishment.get("telefone1") or ""
-	ddd2, tel2 = establishment.get("ddd2") or "", establishment.get("telefone2") or ""
+def _normalizar_cnpjws(d: dict) -> dict:
+	"""Converte a resposta do CNPJ.ws para o formato da BrasilAPI usado em buscar_cnpj."""
+	est = d.get("estabelecimento") or {}
+	principal = est.get("atividade_principal") or {}
+	ddd1, tel1 = est.get("ddd1") or "", est.get("telefone1") or ""
+	ddd2, tel2 = est.get("ddd2") or "", est.get("telefone2") or ""
 	return {
 		"razao_social": d.get("razao_social") or "",
-		"nome_fantasia": establishment.get("nome_fantasia") or "",
-		"situacao_cadastral": establishment.get("situacao_cadastral") or "",
+		"nome_fantasia": est.get("nome_fantasia") or "",
+		"situacao_cadastral": est.get("situacao_cadastral") or "",
 		"natureza_juridica": (d.get("natureza_juridica") or {}).get("descricao", ""),
-		"data_inicio_atividade": establishment.get("data_inicio_atividade") or "",
-		"cnae_fiscal": primary.get("id") or "",
-		"cnae_fiscal_descricao": primary.get("descricao") or "",
+		"data_inicio_atividade": est.get("data_inicio_atividade") or "",
+		"cnae_fiscal": principal.get("id") or "",
+		"cnae_fiscal_descricao": principal.get("descricao") or "",
 		"cnaes_secundarios": [
 			{"codigo": a.get("id", ""), "descricao": a.get("descricao", "")}
-			for a in establishment.get("atividades_secundarias") or []
+			for a in est.get("atividades_secundarias") or []
 		],
 		"qsa": [
 			{
@@ -109,114 +108,114 @@ def _normalize_cnpjws(d: dict) -> dict:
 			}
 			for s in d.get("socios") or []
 		],
-		"descricao_tipo_de_logradouro": establishment.get("tipo_logradouro") or "",
-		"logradouro": establishment.get("logradouro") or "",
-		"numero": establishment.get("numero") or "",
-		"complemento": establishment.get("complemento") or "",
-		"bairro": establishment.get("bairro") or "",
-		"municipio": (establishment.get("cidade") or {}).get("nome", ""),
-		"uf": (establishment.get("estado") or {}).get("sigla", ""),
-		"cep": establishment.get("cep") or "",
+		"descricao_tipo_de_logradouro": est.get("tipo_logradouro") or "",
+		"logradouro": est.get("logradouro") or "",
+		"numero": est.get("numero") or "",
+		"complemento": est.get("complemento") or "",
+		"bairro": est.get("bairro") or "",
+		"municipio": (est.get("cidade") or {}).get("nome", ""),
+		"uf": (est.get("estado") or {}).get("sigla", ""),
+		"cep": est.get("cep") or "",
 		"ddd_telefone_1": f"{ddd1}{tel1}" if tel1 else "",
 		"ddd_telefone_2": f"{ddd2}{tel2}" if tel2 else "",
-		"email": establishment.get("email") or "",
+		"email": est.get("email") or "",
 	}
 
 
-def _query_api(cnpj: str):
-	"""Query CNPJ.ws and, on failure, BrasilAPI and Minha Receita (better alphanumeric CNPJ support)."""
-	sources = (
-		(f"{CNPJWS_BASE_URL}/{cnpj}", _normalize_cnpjws),
+def _consultar_api(cnpj: str):
+	"""Consulta CNPJ.ws e, em caso de falha, BrasilAPI e Minha Receita (melhor suporte alfanumérico)."""
+	fontes = (
+		(f"{CNPJWS_BASE_URL}/{cnpj}", _normalizar_cnpjws),
 		(f"{BRASILAPI_BASE_URL}/{cnpj}", None),
 		(f"{MINHA_RECEITA_BASE_URL}/{cnpj}", None),
 	)
-	server_error = None
-	connected = False
+	erro_servidor = None
+	conectou = False
 
-	for url, converter in sources:
+	for url, conversor in fontes:
 		try:
 			response = requests.get(url, timeout=15)
 		except requests.exceptions.RequestException:
 			continue
-		connected = True
+		conectou = True
 		if response.status_code == 200:
 			try:
-				data = response.json()
-				return converter(data) if converter else data
+				dados = response.json()
+				return conversor(dados) if conversor else dados
 			except ValueError:
-				server_error = response.status_code
+				erro_servidor = response.status_code
 				continue
 		if response.status_code not in (400, 404):
-			server_error = response.status_code
+			erro_servidor = response.status_code
 
-	if not connected:
+	if not conectou:
 		frappe.throw(_("Não foi possível conectar à API de consulta. Tente novamente."))
-	if server_error:
-		frappe.throw(_("Erro ao consultar CNPJ (código {0}). Tente novamente.").format(server_error))
+	if erro_servidor:
+		frappe.throw(_("Erro ao consultar CNPJ (código {0}). Tente novamente.").format(erro_servidor))
 	frappe.throw(_("CNPJ não encontrado na base da Receita Federal."))
 
 
 @frappe.whitelist()
-def lookup_cnpj(cnpj: str) -> dict:
-	base = normalize_cnpj(cnpj)
+def buscar_cnpj(cnpj: str) -> dict:
+	base = normalizar_cnpj(cnpj)
 
-	if not validate_cnpj(base):
+	if not validar_cnpj(base):
 		frappe.throw(_("CNPJ inválido. Verifique os dígitos informados."))
 
-	data = _query_api(base)
+	dados = _consultar_api(base)
 
-	legal_name = sanitize_company_name(data.get("razao_social", ""))
-	trade_name = sanitize_company_name(data.get("nome_fantasia", ""))
+	razao = sanitizar_razao_social(dados.get("razao_social", ""))
+	fantasia = sanitizar_razao_social(dados.get("nome_fantasia", ""))
 
-	partners = []
-	for s in data.get("qsa") or []:
-		partners.append(
+	socios = []
+	for s in dados.get("qsa") or []:
+		socios.append(
 			{
 				"nome": s.get("nome_socio") or s.get("nome") or "",
 				"qualificacao": s.get("qualificacao_socio") or s.get("qualificacao") or "",
 			}
 		)
 
-	status = data.get("situacao_cadastral")
-	is_active = status == 2 or str(status).upper() == "ATIVA"
-	status_description = (
-		data.get("descricao_situacao_cadastral")
-		or data.get("descricao_situacao")
-		or ("" if status in (None, 2) else str(status))
+	situacao = dados.get("situacao_cadastral")
+	situacao_ativa = situacao == 2 or str(situacao).upper() == "ATIVA"
+	situacao_desc = (
+		dados.get("descricao_situacao_cadastral")
+		or dados.get("descricao_situacao")
+		or ("" if situacao in (None, 2) else str(situacao))
 	)
-	if is_active and not status_description:
-		status_description = "ATIVA"
+	if situacao_ativa and not situacao_desc:
+		situacao_desc = "ATIVA"
 
 	return {
-		"cnpj_formatado": format_cnpj(base),
-		"razao_social": legal_name,
-		"nome_fantasia": trade_name,
-		"situacao_cadastral": status_description,
-		"situacao_ativa": is_active,
-		"natureza_juridica": data.get("natureza_juridica", ""),
-		"data_inicio_atividade": data.get("data_inicio_atividade", ""),
-		"cnae_fiscal": data.get("cnae_fiscal", ""),
-		"cnae_fiscal_descricao": data.get("cnae_fiscal_descricao", ""),
-		"cnaes": _extract_cnaes(data),
+		"cnpj_formatado": formatar_cnpj(base),
+		"razao_social": razao,
+		"nome_fantasia": fantasia,
+		"situacao_cadastral": situacao_desc,
+		"situacao_ativa": situacao_ativa,
+		"natureza_juridica": dados.get("natureza_juridica", ""),
+		"data_inicio_atividade": dados.get("data_inicio_atividade", ""),
+		"cnae_fiscal": dados.get("cnae_fiscal", ""),
+		"cnae_fiscal_descricao": dados.get("cnae_fiscal_descricao", ""),
+		"cnaes": _extrair_cnaes(dados),
 		"endereco": {
-			"address_line1": _build_address_line1(data),
-			"address_line2": _build_address_line2(data),
-			"bairro": (data.get("bairro") or "").strip(),
-			"city": data.get("municipio", ""),
-			"state": data.get("uf", ""),
-			"pincode": format_cep(data.get("cep", "")),
-			"phone": format_phone(data.get("ddd_telefone_1", "")),
-			"email_id": data.get("email") or "",
+			"address_line1": _montar_address_line1(dados),
+			"address_line2": _montar_address_line2(dados),
+			"bairro": (dados.get("bairro") or "").strip(),
+			"city": dados.get("municipio", ""),
+			"state": dados.get("uf", ""),
+			"pincode": formatar_cep(dados.get("cep", "")),
+			"phone": formatar_telefone(dados.get("ddd_telefone_1", "")),
+			"email_id": dados.get("email") or "",
 		},
-		"socios": partners,
-		"telefone_1": format_phone(data.get("ddd_telefone_1", "")),
-		"telefone_2": format_phone(data.get("ddd_telefone_2", "")),
-		"email": data.get("email") or "",
+		"socios": socios,
+		"telefone_1": formatar_telefone(dados.get("ddd_telefone_1", "")),
+		"telefone_2": formatar_telefone(dados.get("ddd_telefone_2", "")),
+		"email": dados.get("email") or "",
 	}
 
 
 @frappe.whitelist()
-def lookup_cep(cep: str) -> dict:
+def buscar_cep(cep: str) -> dict:
 	digits = re.sub(r"\D", "", cep or "")
 	if len(digits) != 8:
 		frappe.throw(_("CEP inválido. Informe os 8 dígitos."))
@@ -232,66 +231,59 @@ def lookup_cep(cep: str) -> dict:
 		frappe.throw(_("Erro ao consultar CEP (código {0}). Tente novamente.").format(response.status_code))
 
 	try:
-		data = response.json()
+		dados = response.json()
 	except ValueError:
 		frappe.throw(_("Resposta inválida do ViaCEP. Tente novamente."))
 
-	if data.get("erro"):
+	if dados.get("erro"):
 		frappe.throw(_("CEP não encontrado."))
 
 	return {
-		"pincode": format_cep(digits),
-		"address_line1": (data.get("logradouro") or "").strip(),
-		"address_line2": (data.get("complemento") or "").strip(),
-		"bairro": (data.get("bairro") or "").strip(),
-		"city": (data.get("localidade") or "").strip(),
-		"state": (data.get("uf") or "").strip(),
+		"pincode": formatar_cep(digits),
+		"address_line1": (dados.get("logradouro") or "").strip(),
+		"address_line2": (dados.get("complemento") or "").strip(),
+		"bairro": (dados.get("bairro") or "").strip(),
+		"city": (dados.get("localidade") or "").strip(),
+		"state": (dados.get("uf") or "").strip(),
 	}
 
 
-@frappe.whitelist(methods=["POST"])
-def confirm_cnpj_data(supplier_name: str, data: str) -> dict:
-	if isinstance(data, str):
-		data = json.loads(data)
+@frappe.whitelist()
+def confirmar_dados_cnpj(supplier_name: str, dados: str) -> dict:
+	if isinstance(dados, str):
+		dados = json.loads(dados)
 
 	supplier = frappe.get_doc("Supplier", supplier_name)
-	new_legal_name = data.get("razao_social", "")
+	new_razao = dados.get("razao_social", "")
 	old_name = supplier.name
 
-	supplier.tax_id = data.get("cnpj_formatado", "")
+	supplier.tax_id = dados.get("cnpj_formatado", "")
 	supplier.supplier_type = "Company"
 
-	_update_cnaes(supplier, data.get("cnaes", []))
+	_atualizar_cnaes(supplier, dados.get("cnaes", []))
 
 	naming_by_name = frappe.defaults.get_global_default("supp_master_name") == "Supplier Name"
 
-	if naming_by_name and new_legal_name and new_legal_name != old_name:
+	if naming_by_name and new_razao and new_razao != old_name:
 		supplier.supplier_name = old_name
 		supplier.save(ignore_permissions=True)
-		# Savepoint instead of a manual commit: if the rename fails, only it is undone and the save above stays in
-		# the request transaction (committed at the end of the request).
-		frappe.db.savepoint(SAVEPOINT_RENAME_SUPPLIER)
+		frappe.db.commit()
 		try:
-			frappe.rename_doc("Supplier", old_name, new_legal_name, merge=False)
+			frappe.rename_doc("Supplier", old_name, new_razao, merge=False)
 		except frappe.DuplicateEntryError:
-			frappe.db.rollback(save_point=SAVEPOINT_RENAME_SUPPLIER)
 			frappe.log_error(
 				title="Busca CNPJ: rename falhou",
-				message=f"Supplier '{new_legal_name}' já existe. Mantendo nome original.",
+				message=f"Supplier '{new_razao}' já existe. Mantendo nome original.",
 			)
-		except Exception:
-			# Any other error (e.g. ValidationError) is not swallowed: undo the partial rename and propagate.
-			frappe.db.rollback(save_point=SAVEPOINT_RENAME_SUPPLIER)
-			raise
-		supplier = frappe.get_doc("Supplier", frappe.db.exists("Supplier", new_legal_name) or old_name)
+		supplier = frappe.get_doc("Supplier", frappe.db.exists("Supplier", new_razao) or old_name)
 	else:
-		if new_legal_name:
-			supplier.supplier_name = new_legal_name
+		if new_razao:
+			supplier.supplier_name = new_razao
 		supplier.save(ignore_permissions=True)
 
 	address_name = None
 	try:
-		address_name = _create_address(supplier.name, data)
+		address_name = _criar_endereco(supplier.name, dados)
 	except Exception:
 		frappe.log_error(
 			title="Busca CNPJ: erro ao criar endereço",
@@ -300,7 +292,7 @@ def confirm_cnpj_data(supplier_name: str, data: str) -> dict:
 
 	contact_name = None
 	try:
-		contact_name = _create_contact(supplier.name, data)
+		contact_name = _criar_contato(supplier.name, dados)
 	except Exception:
 		frappe.log_error(
 			title="Busca CNPJ: erro ao criar contato",
@@ -317,7 +309,7 @@ def confirm_cnpj_data(supplier_name: str, data: str) -> dict:
 		supplier.supplier_primary_contact = contact_name
 		supplier.save(ignore_permissions=True)
 
-	cnaes_count = len(data.get("cnaes", []))
+	cnaes_count = len(dados.get("cnaes", []))
 
 	return {
 		"supplier": supplier.name,
@@ -327,7 +319,7 @@ def confirm_cnpj_data(supplier_name: str, data: str) -> dict:
 	}
 
 
-def _update_cnaes(supplier, cnaes: list[dict]):
+def _atualizar_cnaes(supplier, cnaes: list[dict]):
 	supplier.set("cnaes", [])
 	for cnae in cnaes:
 		supplier.append(
@@ -340,16 +332,16 @@ def _update_cnaes(supplier, cnaes: list[dict]):
 		)
 
 
-def _create_address(supplier_name: str, data: dict) -> str | None:
-	address_data = data.get("endereco", {})
-	address_line1 = address_data.get("address_line1", "")
-	city = address_data.get("city", "")
+def _criar_endereco(supplier_name: str, dados: dict) -> str | None:
+	endereco = dados.get("endereco", {})
+	address_line1 = endereco.get("address_line1", "")
+	city = endereco.get("city", "")
 
 	if not address_line1:
-		address_line1 = address_data.get("address_line2", "") or "Endereço não informado"
+		address_line1 = endereco.get("address_line2", "") or "Endereço não informado"
 
 	if not city:
-		city = address_data.get("state", "") or "Não informado"
+		city = endereco.get("state", "") or "Não informado"
 
 	existing = frappe.db.get_all(
 		"Dynamic Link",
@@ -370,26 +362,26 @@ def _create_address(supplier_name: str, data: dict) -> str | None:
 	address.address_title = supplier_name
 	address.address_type = "Office"
 	address.address_line1 = address_line1
-	address.address_line2 = address_data.get("address_line2", "")
-	address.custom_bairro = address_data.get("bairro", "")
+	address.address_line2 = endereco.get("address_line2", "")
+	address.custom_bairro = endereco.get("bairro", "")
 	address.city = city
-	address.state = address_data.get("state", "")
+	address.state = endereco.get("state", "")
 	address.country = "Brazil"
-	address.pincode = address_data.get("pincode", "")
-	address.phone = address_data.get("phone", "")
-	address.email_id = address_data.get("email_id", "")
+	address.pincode = endereco.get("pincode", "")
+	address.phone = endereco.get("phone", "")
+	address.email_id = endereco.get("email_id", "")
 	address.is_primary_address = 1
 	address.is_shipping_address = 0
 	address.save(ignore_permissions=True)
 	return address.name
 
 
-def _create_contact(supplier_name: str, data: dict) -> str | None:
-	partners = data.get("socios", [])
-	phone = data.get("telefone_1", "")
-	email = data.get("email", "")
+def _criar_contato(supplier_name: str, dados: dict) -> str | None:
+	socios = dados.get("socios", [])
+	telefone = dados.get("telefone_1", "")
+	email = dados.get("email", "")
 
-	if not partners and not phone and not email:
+	if not socios and not telefone and not email:
 		return None
 
 	existing = frappe.db.get_all(
@@ -410,51 +402,25 @@ def _create_contact(supplier_name: str, data: dict) -> str | None:
 		contact = frappe.new_doc("Contact")
 		contact.append("links", {"link_doctype": "Supplier", "link_name": supplier_name})
 
-	if partners:
-		full_name = partners[0].get("nome", "")
-		name_parts = full_name.strip().split()
-		if name_parts:
-			contact.first_name = name_parts[0]
-			if len(name_parts) > 1:
-				contact.last_name = " ".join(name_parts[1:])
-		contact.designation = partners[0].get("qualificacao", "")
+	if socios:
+		nome_completo = socios[0].get("nome", "")
+		partes = nome_completo.strip().split()
+		if partes:
+			contact.first_name = partes[0]
+			if len(partes) > 1:
+				contact.last_name = " ".join(partes[1:])
+		contact.designation = socios[0].get("qualificacao", "")
 	else:
 		contact.first_name = supplier_name
 
 	contact.status = "Passive"
 	contact.is_primary_contact = 1
 
-	if phone:
-		contact.append("phone_nos", {"phone": phone, "is_primary_phone": 1})
+	if telefone:
+		contact.append("phone_nos", {"phone": telefone, "is_primary_phone": 1})
 
 	if email:
 		contact.append("email_ids", {"email_id": email, "is_primary": 1})
 
 	contact.save(ignore_permissions=True)
 	return contact.name
-
-
-# Deprecated Portuguese aliases kept for external consumers (integracoes_customizadas imports
-# `buscar_cnpj` and `confirmar_dados_cnpj`; the JS of other apps may call them by dotted path).
-# Remove once the consumers migrate to `lookup_cnpj` and `confirm_cnpj_data`.
-@frappe.whitelist()
-def buscar_cep(cep: str) -> dict:
-	"""Deprecated alias of `lookup_cep`; remove after external callers migrate."""
-	return lookup_cep(cep)
-
-
-@frappe.whitelist()
-def buscar_cnpj(cnpj: str) -> dict:
-	return lookup_cnpj(cnpj)
-
-
-@frappe.whitelist(methods=["POST"])
-def confirmar_dados_cnpj(supplier_name: str, dados: str) -> dict:
-	return confirm_cnpj_data(supplier_name, dados)
-
-
-# Deprecated aliases of the formatting helpers; remove after external callers migrate.
-formatar_cep = format_cep
-formatar_telefone = format_phone
-sanitizar_razao_social = sanitize_company_name
-SAVEPOINT_RENOMEAR_SUPPLIER = SAVEPOINT_RENAME_SUPPLIER
