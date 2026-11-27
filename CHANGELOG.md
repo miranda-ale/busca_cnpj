@@ -24,6 +24,8 @@ that of the commit marked by the tag. The "Unreleased" entries come from commits
 
 ## Unreleased
 
+- Phase 2: DocType `CNAE Fornecedor` -> `CNPJ Supplier CNAE` with patch `s01_rename_cnae_doctype` (see `docs/adr-005-persisted-names-phase-2.md`).
+
 - Naming and language standardization (phase 1): identifiers in Python, JavaScript and tests renamed from Portuguese
   to English (`lookup_cnpj`, `lookup_cep`, `confirm_cnpj_data`, `normalize_cnpj`, `validate_cnpj`, `format_cnpj`,
   `validate_cpf`, `validate_tax_id`, ...); comments, docstrings and documentation translated to English. The old

@@ -28,7 +28,7 @@ It is also used by another app on the bench: `integracoes_customizadas` depends 
   successfully, tries [BrasilAPI](https://brasilapi.com.br) and, last, [Minha Receita](https://minhareceita.org). The
   CNPJ.ws response is converted to the BrasilAPI format (`_normalize_cnpjws`), which is the format used by
   `lookup_cnpj`.
-- **Supplier CNAEs**: child table `CNAE Fornecedor` (code, description and primary-CNAE flag) in a collapsible
+- **Supplier CNAEs**: child table `CNPJ Supplier CNAE` (code, description and primary-CNAE flag) in a collapsible
   section right below the CNPJ/CPF.
 - **Mask and validation**: formats the CNPJ while typing and validates the check digits (numeric and alphanumeric)
   or the CPF, in the form (`supplier.js`) and on the server (`doc_events` → `Supplier.validate`). An empty `tax_id`
@@ -135,10 +135,10 @@ busca_cnpj/
 ├── hooks.py · modules.txt · patches.txt (no patches)
 ├── public/js/            # cep.js · taxid.js (global) · supplier.js · address.js · employee.js
 ├── tests/test_cnpj.py
-└── busca_cnpj/doctype/cnae_fornecedor/   # child table of CNAEs
+└── busca_cnpj/doctype/cnpj_supplier_cnae/   # child table of CNAEs
 ```
 
-There is no workspace, report, print format, fixture or patch; the only DocType is `CNAE Fornecedor` (child table).
+There is no workspace, report, print format, fixture or patch; the only DocType is `CNPJ Supplier CNAE` (child table).
 
 JavaScript loading (`hooks.py`): `cep.js` and `taxid.js` are included on every Desk page (`app_include_js`).
 `cep.js` exposes `busca_cnpj.cep` (`strip`, `mask`, `bind_input`, `add_button`, `lookup`); `taxid.js` exposes

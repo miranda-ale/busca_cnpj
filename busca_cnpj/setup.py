@@ -17,7 +17,7 @@ CUSTOM_FIELDS = {
 			"fieldname": "cnaes",
 			"fieldtype": "Table",
 			"label": "CNAEs",
-			"options": "CNAE Fornecedor",
+			"options": "CNPJ Supplier CNAE",
 			"insert_after": "cnae_section",
 		},
 	],
