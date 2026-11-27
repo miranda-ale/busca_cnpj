@@ -35,7 +35,9 @@ busca_cnpj.cep.add_button = function (field, on_click) {
 
 	const $btn = $(`
 		<span class="btn-busca-cep" style="position:absolute;right:0;top:0;display:flex;align-items:center;height:100%;padding-right:8px;cursor:pointer;z-index:1">
-			<button class="btn btn-xs btn-primary" title="${__("Buscar endereço pelo CEP (ViaCEP)")}" style="white-space:nowrap">
+			<button class="btn btn-xs btn-primary" title="${__(
+				"Buscar endereço pelo CEP (ViaCEP)"
+			)}" style="white-space:nowrap">
 				${frappe.utils.icon("search", "xs")}
 				${__("Buscar")}
 			</button>
@@ -66,7 +68,7 @@ busca_cnpj.cep.lookup = function (value, callback) {
 	}
 
 	frappe.call({
-		method: "busca_cnpj.api.buscar_cep",
+		method: "busca_cnpj.api.lookup_cep",
 		args: { cep: digits },
 		freeze: true,
 		freeze_message: __("Consultando CEP..."),

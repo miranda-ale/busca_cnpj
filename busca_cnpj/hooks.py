@@ -1,14 +1,14 @@
 app_name = "busca_cnpj"
 app_title = "Busca CNPJ"
-app_publisher = "Alessandro Miranda"
-app_description = "Busca de CNPJs Brasileiros integrados ao DocType de Fornecedores (Suppliers)"
+app_publisher = "StillPulse Tecnologia LTDA"
+app_description = "Brazilian CNPJ and CEP lookup integrated with ERPNext Supplier, Address and Employee"
 app_email = "alessandro.siqueira@outlook.com"
-app_license = "mit"
+app_license = "Proprietary"
 
 # Apps
 # ------------------
 
-required_apps = ["erpnext"]
+required_apps = ["frappe/frappe@version-15", "frappe/erpnext@version-15"]
 
 # Each item in the list will be shown as an app in the apps page
 # add_to_apps_screen = [
@@ -43,7 +43,7 @@ required_apps = ["erpnext"]
 # page_js = {"page" : "public/js/file.js"}
 
 # include js in doctype views
-app_include_js = "/assets/busca_cnpj/js/cep.js"
+app_include_js = ["/assets/busca_cnpj/js/cep.js", "/assets/busca_cnpj/js/taxid.js"]
 
 doctype_js = {
 	"Supplier": "public/js/supplier.js",
@@ -251,4 +251,3 @@ doc_events = {
 # ------------
 # List of apps whose translatable strings should be excluded from this app's translations.
 # ignore_translatable_strings_from = []
-

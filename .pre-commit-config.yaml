@@ -1,5 +1,6 @@
 exclude: 'node_modules|.git'
 default_stages: [pre-commit]
+default_install_hook_types: [pre-commit, commit-msg]
 fail_fast: false
 
 
@@ -18,7 +19,7 @@ repos:
       - id: debug-statements
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.8.1
+    rev: v0.16.10
     hooks:
       - id: ruff
         name: "Run ruff import sorter"
@@ -38,11 +39,8 @@ repos:
         # Ignore any files that might contain jinja / bundles
         exclude: |
             (?x)^(
-                busca_cnpj/public/dist/.*|
                 .*node_modules.*|
-                .*boilerplate.*|
-                busca_cnpj/templates/includes/.*|
-                busca_cnpj/public/js/lib/.*
+                .*boilerplate.*
             )$
 
 
@@ -55,13 +53,16 @@ repos:
         # Ignore any files that might contain jinja / bundles
         exclude: |
             (?x)^(
-                busca_cnpj/public/dist/.*|
-                cypress/.*|
                 .*node_modules.*|
-                .*boilerplate.*|
-                busca_cnpj/templates/includes/.*|
-                busca_cnpj/public/js/lib/.*
+                .*boilerplate.*
             )$
+
+  - repo: https://github.com/alessandrojcm/commitlint-pre-commit-hook
+    rev: v9.22.0
+    hooks:
+      - id: commitlint
+        stages: [commit-msg]
+        additional_dependencies: ['conventional-changelog-conventionalcommits']
 
 ci:
     autoupdate_schedule: weekly

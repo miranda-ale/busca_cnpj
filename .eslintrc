@@ -25,6 +25,7 @@
 	},
 	"root": true,
 	"globals": {
+		"busca_cnpj": "writable",
 		"frappe": true,
 		"Vue": true,
 		"SetVueGlobals": true,
