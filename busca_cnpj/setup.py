@@ -17,7 +17,7 @@ CUSTOM_FIELDS = {
 			"fieldname": "cnaes",
 			"fieldtype": "Table",
 			"label": "CNAEs",
-			"options": "CNPJ Supplier CNAE",
+			"options": "CNAE Fornecedor",
 			"insert_after": "cnae_section",
 		},
 	],
@@ -42,28 +42,28 @@ CUSTOM_FIELDS = {
 
 def after_install():
 	create_custom_fields(CUSTOM_FIELDS, update=True)
-	adjust_address_layout()
-	disable_legacy_cnpj_scripts()
+	ajustar_layout_address()
+	desativar_scripts_cnpj_legado()
 
 
-def adjust_address_layout():
-	"""Label the postal code (CEP) and place it right below the address type, before the street line."""
+def ajustar_layout_address():
+	"""Rotula o CEP e o coloca logo abaixo do tipo de endereço, antes do logradouro."""
 	make_property_setter("Address", "pincode", "label", "CEP", "Data")
 
-	fieldnames = [df.fieldname for df in frappe.get_meta("Address", cached=False).fields]
-	if "pincode" not in fieldnames or "address_type" not in fieldnames:
+	campos = [df.fieldname for df in frappe.get_meta("Address", cached=False).fields]
+	if "pincode" not in campos or "address_type" not in campos:
 		return
-	fieldnames.remove("pincode")
-	fieldnames.insert(fieldnames.index("address_type") + 1, "pincode")
+	campos.remove("pincode")
+	campos.insert(campos.index("address_type") + 1, "pincode")
 
-	current = frappe.db.get_value(
+	atual = frappe.db.get_value(
 		"Property Setter",
 		{"doc_type": "Address", "doctype_or_field": "DocType", "property": "field_order"},
 		"value",
 	)
-	if current and json.loads(current) == fieldnames:
+	if atual and json.loads(atual) == campos:
 		return
-	make_property_setter("Address", None, "field_order", json.dumps(fieldnames), "Data", for_doctype=True)
+	make_property_setter("Address", None, "field_order", json.dumps(campos), "Data", for_doctype=True)
 
 
 def after_migrate():
@@ -81,23 +81,23 @@ LEGACY_MARKERS = (
 )
 
 
-def disable_legacy_cnpj_scripts():
-	"""Disable site Client/Server Scripts that still validate CNPJ with digits only."""
-	_disable_client_scripts()
-	_disable_server_scripts()
+def desativar_scripts_cnpj_legado():
+	"""Desliga Client/Server Script do site que ainda validam CNPJ só com dígitos."""
+	_desativar_client_scripts()
+	_desativar_server_scripts()
 
 
-def _is_legacy_script(script: str) -> bool:
-	text = (script or "").lower()
-	if any(m in text for m in LEGACY_MARKERS):
+def _texto_legado(script: str) -> bool:
+	texto = (script or "").lower()
+	if any(m in texto for m in LEGACY_MARKERS):
 		return True
-	if "cnpj inválido" in text or "cnpj invalido" in text:
-		has_new_ascii_logic = "charcodeat" in text or "ord(" in text or "- 48" in text
-		return not has_new_ascii_logic
+	if "cnpj inválido" in texto or "cnpj invalido" in texto:
+		ascii_novo = "charcodeat" in texto or "ord(" in texto or "- 48" in texto
+		return not ascii_novo
 	return False
 
 
-def _disable_client_scripts():
+def _desativar_client_scripts():
 	if not frappe.db.exists("DocType", "Client Script"):
 		return
 	scripts = frappe.get_all(
@@ -106,13 +106,13 @@ def _disable_client_scripts():
 		fields=["name", "script"],
 	)
 	for row in scripts:
-		if not _is_legacy_script(row.script):
+		if not _texto_legado(row.script):
 			continue
 		frappe.db.set_value("Client Script", row.name, "enabled", 0, update_modified=False)
 		frappe.logger("busca_cnpj").info("Client Script legado desativado: %s", row.name)
 
 
-def _disable_server_scripts():
+def _desativar_server_scripts():
 	if not frappe.db.exists("DocType", "Server Script"):
 		return
 	scripts = frappe.get_all(
@@ -121,12 +121,7 @@ def _disable_server_scripts():
 		fields=["name", "script"],
 	)
 	for row in scripts:
-		if not _is_legacy_script(row.script):
+		if not _texto_legado(row.script):
 			continue
 		frappe.db.set_value("Server Script", row.name, "disabled", 1, update_modified=False)
 		frappe.logger("busca_cnpj").info("Server Script legado desativado: %s", row.name)
-
-
-# Deprecated aliases kept for the old public names; remove after external callers migrate.
-ajustar_layout_address = adjust_address_layout
-desativar_scripts_cnpj_legado = disable_legacy_cnpj_scripts

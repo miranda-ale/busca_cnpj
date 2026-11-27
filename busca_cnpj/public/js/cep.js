@@ -68,7 +68,7 @@ busca_cnpj.cep.lookup = function (value, callback) {
 	}
 
 	frappe.call({
-		method: "busca_cnpj.api.lookup_cep",
+		method: "busca_cnpj.api.buscar_cep",
 		args: { cep: digits },
 		freeze: true,
 		freeze_message: __("Consultando CEP..."),

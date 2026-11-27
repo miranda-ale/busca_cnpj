@@ -1,6 +1,6 @@
 frappe.ui.form.on("Address", {
 	refresh(frm) {
-		const search = () => lookup_cep_address(frm);
+		const search = () => buscar_cep_address(frm);
 		busca_cnpj.cep.add_button(frm.fields_dict.pincode, search);
 		busca_cnpj.cep.bind_input(frm.fields_dict.pincode, search);
 	},
@@ -14,7 +14,7 @@ frappe.ui.form.on("Address", {
 	},
 });
 
-function lookup_cep_address(frm) {
+function buscar_cep_address(frm) {
 	busca_cnpj.cep.lookup(frm.doc.pincode, (d) => {
 		const values = {
 			pincode: d.pincode,
@@ -24,7 +24,7 @@ function lookup_cep_address(frm) {
 			state: d.state,
 			country: "Brazil",
 		};
-		// Generic (city-level) CEPs come without street/neighborhood: do not overwrite what was already typed.
+		// CEPs genéricos (de cidade) vêm sem logradouro/bairro: não apaga o que já foi digitado.
 		if (d.address_line2 && !frm.doc.address_line2) values.address_line2 = d.address_line2;
 		for (const key of Object.keys(values)) {
 			if (values[key]) frm.set_value(key, values[key]);
